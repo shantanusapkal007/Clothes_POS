@@ -169,7 +169,7 @@ export function PosWorkspace() {
 
         const messageBits = [`${product.name} added`];
         if (barcodeData.price !== undefined) {
-          messageBits.push(`price Rs ${barcodeData.price.toFixed(2)}`);
+          messageBits.push(`price ₹${barcodeData.price.toFixed(2)}`);
         }
         if (barcodeData.discount !== undefined) {
           messageBits.push(`discount ${barcodeData.discount}%`);
@@ -359,7 +359,7 @@ export function PosWorkspace() {
           </div>
           <div className="ops-card bg-gradient-to-br from-primary-container to-primary-container/70">
             <span className="ops-label text-on-primary-container">Total</span>
-            <strong className="text-lg text-on-primary-container">Rs {cartSummary.finalAmount.toFixed(0)}</strong>
+            <strong className="text-lg text-on-primary-container">₹{cartSummary.finalAmount.toFixed(0)}</strong>
             <span className="ops-help text-on-primary-container">payable</span>
           </div>
         </div>
@@ -491,7 +491,7 @@ export function PosWorkspace() {
           onClick={() => setMobileView("cart")}
         >
           <span className="material-symbols-outlined text-xl">shopping_cart</span>
-          <span>{items.length} - Rs {cartSummary.finalAmount.toFixed(0)}</span>
+          <span>{items.length} — ₹{cartSummary.finalAmount.toFixed(0)}</span>
         </button>
       )}
 

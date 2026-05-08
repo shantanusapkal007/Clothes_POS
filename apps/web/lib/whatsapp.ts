@@ -51,16 +51,16 @@ export function buildWhatsAppBillMessage(
     lines.push("Items:");
     for (const item of bill.items) {
       lines.push(
-        `- ${item.productName} x${item.quantity} | Rs ${item.price.toFixed(2)} | Rs ${item.total.toFixed(2)}`
+        `- ${item.productName} x${item.quantity} | ₹${item.price.toFixed(2)} | ₹${item.total.toFixed(2)}`
       );
     }
   }
 
   lines.push("");
-  lines.push(`Subtotal: Rs ${bill.totalAmount.toFixed(2)}`);
-  lines.push(`Discount: Rs ${bill.discountAmount.toFixed(2)}`);
-  lines.push(`Tax: Rs ${bill.taxAmount.toFixed(2)}`);
-  lines.push(`Total: Rs ${bill.finalAmount.toFixed(2)}`);
+  lines.push(`Subtotal: ₹${bill.totalAmount.toFixed(2)}`);
+  lines.push(`Discount: ₹${bill.discountAmount.toFixed(2)}`);
+  lines.push(`Tax: ₹${bill.taxAmount.toFixed(2)}`);
+  lines.push(`Total: ₹${bill.finalAmount.toFixed(2)}`);
 
   lines.push(`Store WhatsApp: ${senderPhone}`);
 

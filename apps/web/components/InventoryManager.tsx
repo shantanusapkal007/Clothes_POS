@@ -190,11 +190,11 @@ export function InventoryManager() {
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <div className="space-y-2">
               <label className="flex items-center gap-1 text-xs font-bold uppercase tracking-wider text-on-surface-variant">
-                Price (Rs) <span className="text-error">*</span>
+                Price (₹) <span className="text-error">*</span>
               </label>
               <div className="relative">
                 <span className="absolute left-4 top-1/2 -translate-y-1/2 font-bold text-on-surface-variant/50">
-                  Rs
+                  ₹
                 </span>
                 <input
                   className="field-input pl-11 md:pl-12"
@@ -362,7 +362,7 @@ export function InventoryManager() {
                             Price
                           </span>
                           <div className="flex items-center gap-2">
-                            <span className="text-sm text-secondary">Rs</span>
+                            <span className="text-sm text-secondary">₹</span>
                             <input
                               className="field-input-compact text-right font-serif text-base"
                               type="number"
@@ -436,7 +436,7 @@ export function InventoryManager() {
                       </td>
                       <td className="py-4 text-right font-serif text-base text-on-surface md:py-6 md:text-lg">
                         <div className="inline-flex items-center justify-end">
-                          <span className="mr-1 text-sm text-secondary">Rs</span>
+                          <span className="mr-1 text-sm text-secondary">₹</span>
                           <input
                             className="w-20 rounded-lg border border-outline-variant/60 bg-white p-2 text-right font-serif text-base shadow-sm transition-colors focus:border-primary focus:ring-2 focus:ring-primary/20 md:w-24 md:text-lg"
                             type="number"

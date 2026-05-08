@@ -309,7 +309,7 @@ export function removePairedBluetoothDevice(deviceId: string): void {
 }
 
 function formatAmount(value: number): string {
-  return `Rs ${value.toFixed(2)}`;
+  return `₹${value.toFixed(2)}`;
 }
 
 function wrapText(text: string, width: number): string[] {

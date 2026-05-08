@@ -4,6 +4,7 @@ import { Noto_Serif, Inter } from "next/font/google";
 import { MobileViewportGuard } from "../components/MobileViewportGuard";
 import { Navigation } from "../components/Navigation";
 import { PwaRegistrar } from "../components/PwaRegistrar";
+import { InstallPrompt } from "../components/InstallPrompt";
 import "./globals.css";
 
 const notoSerif = Noto_Serif({
@@ -70,6 +71,7 @@ export default function RootLayout({
         <PwaRegistrar />
         <MobileViewportGuard />
         <Navigation />
+        <InstallPrompt />
         {children}
       </body>
     </html>

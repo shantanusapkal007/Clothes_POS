@@ -133,7 +133,7 @@ export function CartPanel({
                           {item.name}
                         </h5>
                         <p className="text-[10px] font-bold text-primary md:text-xs">
-                          Rs {item.price.toFixed(0)} x {item.quantity}
+                          ₹{item.price.toFixed(0)} x {item.quantity}
                           {item.discountPercent > 0 && (
                             <span className="ml-1 text-emerald-700">-{item.discountPercent}%</span>
                           )}
@@ -171,7 +171,7 @@ export function CartPanel({
 
                       {/* Line total */}
                       <div className="cart-item-compact__total">
-                        Rs {line?.total.toFixed(0) ?? "0"}
+                        ₹{line?.total.toFixed(0) ?? "0"}
                       </div>
 
                       {/* Expand arrow */}
@@ -256,7 +256,7 @@ export function CartPanel({
 
                               <label className="block">
                                 <span className="mb-1 block text-[9px] font-bold uppercase tracking-[0.15em] text-on-secondary-container">
-                                  Manual Rs
+                                  Manual ₹
                                 </span>
                                 <input
                                   className="field-input-compact text-right tabular-nums"
@@ -300,15 +300,15 @@ export function CartPanel({
                             {/* Line summary */}
                             <div className="flex items-center justify-between text-xs">
                               <span className="text-on-secondary-container">
-                                Subtotal Rs {(line?.lineSubtotal ?? item.price * item.quantity).toFixed(2)}
+                                Subtotal ₹{(line?.lineSubtotal ?? item.price * item.quantity).toFixed(2)}
                                 {line && line.discountAmount > 0 && (
                                   <span className="ml-2 text-emerald-700 font-semibold">
-                                    Saved Rs {line.discountAmount.toFixed(2)}
+                                    Saved ₹{line.discountAmount.toFixed(2)}
                                   </span>
                                 )}
                               </span>
                               <span className="font-headline font-bold text-primary text-base">
-                                Rs {line?.total.toFixed(2) ?? "0.00"}
+                                ₹{line?.total.toFixed(2) ?? "0.00"}
                               </span>
                             </div>
                           </div>
@@ -394,21 +394,21 @@ export function CartPanel({
                 <div className="flex items-center justify-between gap-3 text-xs md:text-sm">
                   <span className="text-on-secondary-container">Subtotal</span>
                   <span className="font-semibold tabular-nums text-on-surface">
-                    Rs {summary.totalAmount.toFixed(2)}
+                    ₹{summary.totalAmount.toFixed(2)}
                   </span>
                 </div>
 
                 <div className="flex items-center justify-between gap-3 text-xs md:text-sm">
                   <span className="text-on-secondary-container">Discounts</span>
                   <span className="font-semibold tabular-nums text-emerald-700">
-                    -Rs {summary.discountAmount.toFixed(2)}
+                    -₹{summary.discountAmount.toFixed(2)}
                   </span>
                 </div>
 
                 <div className="flex items-center justify-between gap-3 text-xs md:text-sm">
                   <span className="text-on-secondary-container">Tax</span>
                   <span className="font-semibold tabular-nums text-on-surface">
-                    +Rs {summary.taxAmount.toFixed(2)}
+                    +₹{summary.taxAmount.toFixed(2)}
                   </span>
                 </div>
 
@@ -419,7 +419,7 @@ export function CartPanel({
                     </span>
                   </div>
                   <span className="font-headline text-xl font-bold tabular-nums text-primary md:text-2xl">
-                    Rs {summary.finalAmount.toFixed(2)}
+                    ₹{summary.finalAmount.toFixed(2)}
                   </span>
                 </div>
               </div>
