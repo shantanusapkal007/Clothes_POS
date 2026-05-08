@@ -93,7 +93,7 @@
   }
 
   .pos-shell {
-    @apply flex min-h-[calc(100dvh-8rem)] flex-col overflow-hidden rounded-lg border border-outline-variant/35 bg-white/95 shadow-[0_20px_70px_rgba(31,26,27,0.08)] backdrop-blur-xl;
+    @apply flex min-h-[calc(100dvh-8rem)] flex-col rounded-lg border border-outline-variant/35 bg-white/95 shadow-[0_20px_70px_rgba(31,26,27,0.08)] backdrop-blur-xl;
   }
 
   @media (min-width: 768px) {

@@ -6,14 +6,40 @@ const containerVariants = {
   hidden: { opacity: 0 },
   show: {
     opacity: 1,
-    transition: { staggerChildren: 0.03, delayChildren: 0.05 }
+    transition: { staggerChildren: 0.02, delayChildren: 0.03 }
   }
 };
 
 const itemVariants = {
-  hidden: { opacity: 0, y: 8 },
-  show: { opacity: 1, y: 0, transition: { type: "spring" as const, stiffness: 400, damping: 28 } }
+  hidden: { opacity: 0, scale: 0.95 },
+  show: { opacity: 1, scale: 1, transition: { type: "spring" as const, stiffness: 500, damping: 30 } }
 };
+
+function getInitials(name: string) {
+  return name
+    .split(/\s+/)
+    .slice(0, 2)
+    .map((w) => w[0])
+    .join("")
+    .toUpperCase();
+}
+
+/* Deterministic pastel color from name */
+function getColor(name: string) {
+  const colors = [
+    { bg: "bg-rose-100", text: "text-rose-700" },
+    { bg: "bg-sky-100", text: "text-sky-700" },
+    { bg: "bg-amber-100", text: "text-amber-700" },
+    { bg: "bg-emerald-100", text: "text-emerald-700" },
+    { bg: "bg-violet-100", text: "text-violet-700" },
+    { bg: "bg-teal-100", text: "text-teal-700" },
+    { bg: "bg-pink-100", text: "text-pink-700" },
+    { bg: "bg-indigo-100", text: "text-indigo-700" },
+  ];
+  let hash = 0;
+  for (let i = 0; i < name.length; i++) hash = name.charCodeAt(i) + ((hash << 5) - hash);
+  return colors[Math.abs(hash) % colors.length];
+}
 
 function ProductGridComponent({
   products,
@@ -24,8 +50,8 @@ function ProductGridComponent({
 }) {
   if (products.length === 0) {
     return (
-      <div className="flex flex-col items-center justify-center py-12 text-center">
-        <span className="material-symbols-outlined mb-3 text-4xl text-on-surface-variant/40">search_off</span>
+      <div className="flex flex-col items-center justify-center py-16 text-center">
+        <span className="material-symbols-outlined mb-3 text-5xl text-on-surface-variant/30">search_off</span>
         <h3 className="text-base font-bold text-on-surface">No products found</h3>
         <p className="mt-1 text-xs text-on-secondary-container">Try adjusting your search or add new stock.</p>
       </div>
@@ -37,51 +63,54 @@ function ProductGridComponent({
       variants={containerVariants}
       initial="hidden"
       animate="show"
-      className="grid grid-cols-2 gap-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5"
+      className="grid grid-cols-3 gap-2 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6"
     >
       {products.map((product) => {
         const lowStock = product.stock <= (product.minStock ?? 2);
+        const color = getColor(product.name);
         return (
           <motion.button
             variants={itemVariants}
             key={product.id}
             type="button"
             onClick={() => onAdd(product)}
-            className="group flex flex-col rounded-xl border border-outline-variant/30 bg-white p-2.5 text-left shadow-sm transition-all active:scale-[0.97] active:bg-primary/5 md:p-3 md:hover:shadow-md md:hover:-translate-y-0.5"
+            className="group relative flex flex-col items-center rounded-xl border border-outline-variant/25 bg-white p-2 text-center shadow-sm transition-all active:scale-[0.95] active:shadow-md md:p-3 md:hover:shadow-md md:hover:-translate-y-0.5"
           >
-            {/* Product Info */}
-            <div className="mb-1">
-              <h4 className="line-clamp-2 text-[13px] font-semibold leading-snug text-on-surface md:text-sm">
-                {product.name}
-              </h4>
-              {product.category && (
-                <p className="mt-0.5 truncate text-[10px] text-on-secondary-container/70">
-                  {product.category}
-                </p>
-              )}
-            </div>
-
-            {/* Price + Stock Row */}
-            <div className="mt-auto flex items-end justify-between pt-1.5">
-              <span className="text-sm font-bold tabular-nums text-primary md:text-base">
-                ₹{product.price.toFixed(0)}
+            {/* Low stock indicator */}
+            {lowStock && (
+              <span className="absolute -right-1 -top-1 flex h-3.5 w-3.5 items-center justify-center rounded-full bg-red-500 text-[7px] font-bold text-white ring-2 ring-white">
+                !
               </span>
-              <span
-                className={`rounded-md px-1.5 py-0.5 text-[10px] font-bold tabular-nums ${
-                  lowStock
-                    ? "bg-red-50 text-red-700"
-                    : "bg-surface-container-high/60 text-on-secondary-container"
-                }`}
-              >
-                {product.stock}
+            )}
+
+            {/* Avatar circle */}
+            <div className={`flex h-11 w-11 items-center justify-center rounded-full ${color.bg} mb-1.5 md:h-14 md:w-14`}>
+              <span className={`text-sm font-bold ${color.text} md:text-base`}>
+                {getInitials(product.name)}
               </span>
             </div>
 
-            {/* Quick add indicator */}
-            <div className="mt-2 flex items-center justify-center gap-1 rounded-lg bg-primary/8 py-1.5 text-[10px] font-bold uppercase tracking-wider text-primary transition-colors group-active:bg-primary group-active:text-white md:group-hover:bg-primary md:group-hover:text-white">
-              <span className="material-symbols-outlined" style={{ fontSize: 14 }}>add</span>
-              Add
-            </div>
+            {/* Product name */}
+            <p className="line-clamp-2 w-full text-[11px] font-semibold leading-tight text-on-surface md:text-xs">
+              {product.name}
+            </p>
+
+            {/* Category */}
+            {product.category && (
+              <p className="mt-0.5 truncate w-full text-[8px] uppercase tracking-wider text-on-secondary-container/50 md:text-[9px]">
+                {product.category}
+              </p>
+            )}
+
+            {/* Price */}
+            <p className="mt-auto pt-1 text-sm font-bold tabular-nums text-primary md:text-base">
+              ₹{product.price.toFixed(0)}
+            </p>
+
+            {/* Stock count */}
+            <p className={`text-[8px] font-bold tabular-nums uppercase ${lowStock ? "text-red-600" : "text-on-secondary-container/40"}`}>
+              {product.stock} in stock
+            </p>
           </motion.button>
         );
       })}

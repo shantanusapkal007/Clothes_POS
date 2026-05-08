@@ -325,48 +325,38 @@ export function PosWorkspace() {
 
   return (
     <section className="pos-shell">
-      {/* ─── Header with Quick Stats ─── */}
-      <header className="z-30 border-b border-outline-variant/25 bg-white/90 p-3 backdrop-blur-sm sm:p-4">
-        <div className="mb-3 flex items-center justify-between gap-3">
-          <div className="min-w-0">
-            <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-on-secondary-container">
-              Sales counter
-            </p>
-            <h2 className="truncate font-headline text-xl font-bold text-on-background sm:text-2xl">
-              {storeName}
-            </h2>
-          </div>
-          <button
-            className="button button-secondary button-small shrink-0"
-            onClick={() => setPrinterSettingsOpen(true)}
-            title="Settings"
-            type="button"
-          >
-            <span className="material-symbols-outlined text-[18px]">settings</span>
-            <span className="hidden sm:inline">Settings</span>
-          </button>
+      {/* ─── Compact Header ─── */}
+      <header className="z-30 flex items-center gap-2 border-b border-outline-variant/25 bg-white/90 px-3 py-2 backdrop-blur-sm sm:px-4 sm:py-3">
+        <div className="min-w-0 flex-1">
+          <h2 className="truncate text-base font-bold text-on-background sm:text-xl">
+            {storeName}
+          </h2>
         </div>
-        <div className="ops-strip">
-          <div className="ops-card">
-            <span className="ops-label">Catalog</span>
-            <strong className="text-lg">{products.length}</strong>
-            <span className="ops-help">products</span>
-          </div>
-          <div className="ops-card">
-            <span className="ops-label">Cart</span>
-            <strong className="text-lg">{items.length}</strong>
-            <span className="ops-help">items</span>
-          </div>
-          <div className="ops-card bg-gradient-to-br from-primary-container to-primary-container/70">
-            <span className="ops-label text-on-primary-container">Total</span>
-            <strong className="text-lg text-on-primary-container">₹{cartSummary.finalAmount.toFixed(0)}</strong>
-            <span className="ops-help text-on-primary-container">payable</span>
-          </div>
+
+        {/* Desktop-only stats */}
+        <div className="hidden items-center gap-3 md:flex">
+          <span className="rounded-lg bg-surface-container-high px-2.5 py-1 text-xs font-bold tabular-nums text-on-secondary-container">
+            {products.length} products
+          </span>
+          {items.length > 0 && (
+            <span className="rounded-lg bg-primary/10 px-2.5 py-1 text-xs font-bold tabular-nums text-primary">
+              Cart: {items.length} — ₹{cartSummary.finalAmount.toFixed(0)}
+            </span>
+          )}
         </div>
+
+        <button
+          className="flex h-9 w-9 items-center justify-center rounded-lg border border-outline-variant/30 bg-white text-on-secondary-container transition active:scale-95"
+          onClick={() => setPrinterSettingsOpen(true)}
+          title="Settings"
+          type="button"
+        >
+          <span className="material-symbols-outlined" style={{ fontSize: 18 }}>settings</span>
+        </button>
       </header>
 
       {/* ─── Mobile Tab Switcher ─── */}
-      <div className="block xl:hidden px-4 py-3 border-b border-outline-variant/20">
+      <div className="block xl:hidden border-b border-outline-variant/20 bg-surface-dim px-3 py-2">
         <div className="mobile-tab-bar">
           <button
             type="button"
@@ -393,45 +383,52 @@ export function PosWorkspace() {
       </div>
 
       {/* ─── Main Content Area ─── */}
-      <div className="flex flex-1 flex-col overflow-hidden xl:flex-row">
+      <div className="flex flex-1 flex-col xl:flex-row xl:overflow-hidden">
         {/* ─── LEFT: Products Panel ─── */}
-        <div className={`flex flex-col overflow-hidden ${mobileView === "cart" ? "hidden xl:flex" : "flex"} xl:flex-1 xl:border-r xl:border-outline-variant/20`}>
-          {/* Search & Scanner */}
-          <div className="flex-shrink-0 space-y-3 border-b border-outline-variant/20 bg-surface-dim p-4 sm:p-6">
+        <div className={`flex flex-col ${mobileView === "cart" ? "hidden xl:flex" : "flex"} xl:flex-1 xl:overflow-hidden xl:border-r xl:border-outline-variant/20`}>
+          {/* Search — compact on mobile */}
+          <div className="flex-shrink-0 border-b border-outline-variant/20 bg-surface-dim p-3 sm:p-4">
             <ScannerPanel
               barcodeInput={barcodeInput}
               setBarcodeInput={setBarcodeInput}
               onBarcodeSubmit={handleBarcodeSubmit}
             />
-
-            <div className="space-y-2">
-              <label className="block">
-                <span className="mb-2 block text-xs font-bold uppercase tracking-wider text-on-surface-variant">
-                  Search Products
-                </span>
+            <div className="mt-2">
+              <div className="flex items-center gap-2 rounded-xl border border-outline-variant/40 bg-white px-3 py-2">
+                <span className="material-symbols-outlined text-on-secondary-container/40" style={{ fontSize: 18 }}>search</span>
                 <input
-                  className="text-input w-full"
-                  placeholder="Search by name, category, or code..."
+                  className="flex-1 border-none bg-transparent text-sm text-on-surface placeholder:text-on-secondary-container/50 focus:outline-none focus:ring-0"
+                  placeholder="Search products..."
                   value={search}
                   onChange={(event) => setSearch(event.target.value)}
+                  style={{ fontSize: 16 }}
                 />
-              </label>
+                {search && (
+                  <button
+                    onClick={() => setSearch("")}
+                    className="material-symbols-outlined text-on-secondary-container/40"
+                    style={{ fontSize: 16 }}
+                  >
+                    close
+                  </button>
+                )}
+              </div>
             </div>
           </div>
 
-          {/* Product Grid */}
-          <div className="flex-1 overflow-y-auto p-4 sm:p-6">
+          {/* Product Grid — scrollable */}
+          <div className="flex-1 overflow-y-auto p-3 sm:p-4" style={{ WebkitOverflowScrolling: "touch" }}>
             {loading ? (
-              <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4 lg:gap-4">
-                {Array.from({ length: 8 }).map((_, i) => (
+              <div className="grid grid-cols-3 gap-2 sm:grid-cols-4 md:grid-cols-5">
+                {Array.from({ length: 12 }).map((_, i) => (
                   <ProductSkeleton key={i} />
                 ))}
               </div>
             ) : visibleProducts.length > 0 ? (
               <ProductGrid products={visibleProducts} onAdd={handleProductAdd} />
             ) : (
-              <div className="flex flex-col items-center justify-center py-16 text-center">
-                <span className="material-symbols-outlined text-4xl text-on-surface-variant mb-3">
+              <div className="flex flex-col items-center justify-center py-12 text-center">
+                <span className="material-symbols-outlined text-4xl text-on-surface-variant/30 mb-3">
                   inventory_2
                 </span>
                 <p className="font-semibold text-on-surface">No products found</p>
