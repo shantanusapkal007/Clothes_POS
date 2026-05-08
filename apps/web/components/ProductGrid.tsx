@@ -92,24 +92,24 @@ function ProductGridComponent({
             </div>
 
             {/* Product name */}
-            <p className="line-clamp-2 w-full text-[9px] sm:text-[10px] md:text-xs font-semibold leading-tight text-on-surface">
+            <p className="line-clamp-2 w-full text-[11px] sm:text-xs font-bold leading-tight text-on-surface">
               {product.name}
             </p>
 
             {/* Category */}
             {product.category && (
-              <p className="mt-0.5 truncate w-full text-[7px] sm:text-[8px] md:text-[9px] uppercase tracking-wider text-on-secondary-container/50">
+              <p className="mt-0.5 truncate w-full text-[9px] font-bold uppercase tracking-wider text-on-secondary-container/70 sm:text-[10px]">
                 {product.category}
               </p>
             )}
 
             {/* Price */}
-            <p className="mt-auto pt-1 text-xs sm:text-sm md:text-base font-bold tabular-nums text-primary">
+            <p className="mt-auto pt-1 text-sm font-extrabold tabular-nums text-primary">
               ₹{product.price.toFixed(0)}
             </p>
 
             {/* Stock count */}
-            <p className={`text-[6px] sm:text-[8px] md:text-[9px] font-bold tabular-nums uppercase ${lowStock ? "text-red-600" : "text-on-secondary-container/40"}`}>
+            <p className={`text-[8px] font-bold tabular-nums uppercase ${lowStock ? "text-red-600" : "text-on-secondary-container/50"} sm:text-[9px]`}>
               {product.stock} in stock
             </p>
           </motion.button>

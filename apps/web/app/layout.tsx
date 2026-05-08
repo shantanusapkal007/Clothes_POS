@@ -55,23 +55,15 @@ export default function RootLayout({
   return (
     <html lang="en" className={`${notoSerif.variable} ${inter.variable}`}>
       <head>
-        <meta name="apple-mobile-web-app-capable" content="yes" />
-        <meta name="apple-mobile-web-app-title" content="Clothing POS" />
-        <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
-        <meta name="mobile-web-app-capable" content="yes" />
         <meta name="theme-color" content="#9f1239" />
-        <link rel="manifest" href="/manifest.webmanifest" />
-        <link rel="apple-touch-icon" href="/icons/apple-touch-icon.png" />
         <link
           href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap"
           rel="stylesheet"
         />
       </head>
       <body className="font-body text-on-background selection:bg-primary-fixed">
-        <PwaRegistrar />
         <MobileViewportGuard />
         <Navigation />
-        <InstallPrompt />
         {children}
       </body>
     </html>
