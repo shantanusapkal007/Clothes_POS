@@ -126,3 +126,53 @@ export function refundBill(id: string, reason?: string) {
   });
 }
 
+/* ─── Khata / Customers ─── */
+
+export type CustomerResponse = {
+  id: string;
+  name: string;
+  phone: string;
+  balance: number;
+  createdAt: string;
+  updatedAt: string;
+  payments: PaymentResponse[];
+};
+
+export type PaymentResponse = {
+  id: string;
+  amount: number;
+  method: string;
+  note: string | null;
+  billId: string | null;
+  createdAt: string;
+};
+
+export function getCustomers(search?: string) {
+  const qs = search ? `?search=${encodeURIComponent(search)}` : "";
+  return request<CustomerResponse[]>(`/customers${qs}`);
+}
+
+export function createCustomer(data: { name: string; phone: string; balance?: number }) {
+  return request<CustomerResponse>("/customers", {
+    method: "POST",
+    body: JSON.stringify(data)
+  });
+}
+
+export function deleteCustomer(id: string) {
+  return request<void>(`/customers/${id}`, { method: "DELETE" });
+}
+
+export function recordPayment(customerId: string, data: { amount: number; method: string; note?: string }) {
+  return request<CustomerResponse>(`/customers/${customerId}/pay`, {
+    method: "POST",
+    body: JSON.stringify(data)
+  });
+}
+
+export function addCredit(customerId: string, data: { amount: number; note?: string }) {
+  return request<CustomerResponse>(`/customers/${customerId}/credit`, {
+    method: "POST",
+    body: JSON.stringify(data)
+  });
+}

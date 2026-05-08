@@ -23,7 +23,7 @@ function LoginForm() {
     setError(null);
     setMessage(null);
 
-    const allowedEmails = ["shantanusapkal007@gmail.com"];
+    const allowedEmails = ["shantanusapkal007@gmail.com", "ajitpatil220@gmail.com", "atuldeore369@gmail.com"];
     if (!allowedEmails.includes(email.toLowerCase().trim())) {
       setError("This email is not authorized to access the system.");
       setPending(false);
