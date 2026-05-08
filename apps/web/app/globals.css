@@ -2,9 +2,14 @@
 @tailwind components;
 @tailwind utilities;
 
+:root {
+  --sidebar-w: 220px;
+}
+
 @layer base {
   html {
     -webkit-text-size-adjust: 100%;
+    -webkit-touch-callout: none;
     touch-action: pan-x pan-y;
     overscroll-behavior: none;
     overflow-x: hidden;
@@ -76,20 +81,33 @@
   /* ─── App Shell ─── */
   .app-shell {
     @apply min-h-screen;
+    /* Mobile: top bar (56px) + bottom tab bar + safe area */
+    padding-top: 3.5rem;
     padding-bottom: calc(4rem + env(safe-area-inset-bottom, 0px));
   }
 
+  /* Desktop main content — offset driven by collapsible sidebar CSS var */
+  .main-content {
+    margin-left: 0;
+    transition: margin-left 0.3s ease;
+  }
+
   .pos-shell {
-    @apply flex min-h-[calc(100dvh-4rem)] flex-col overflow-hidden rounded-lg border border-outline-variant/35 bg-white/95 shadow-[0_20px_70px_rgba(31,26,27,0.08)] backdrop-blur-xl;
+    @apply flex min-h-[calc(100dvh-8rem)] flex-col overflow-hidden rounded-lg border border-outline-variant/35 bg-white/95 shadow-[0_20px_70px_rgba(31,26,27,0.08)] backdrop-blur-xl;
   }
 
   @media (min-width: 768px) {
     .app-shell {
-      padding-bottom: 0;
+      padding-top: 1.5rem;
+      padding-bottom: 1.5rem;
+    }
+
+    .main-content {
+      margin-left: var(--sidebar-w, 220px);
     }
 
     .pos-shell {
-      min-height: calc(100dvh - 7rem);
+      min-height: calc(100dvh - 5rem);
     }
   }
 
