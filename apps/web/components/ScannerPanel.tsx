@@ -157,8 +157,6 @@ export function ScannerPanel({
 
     const storedPrompt = typeof window !== "undefined" ? localStorage.getItem(PRICE_PROMPT_KEY) : null;
     setPromptForPrice(storedPrompt === "true");
-
-    focusInput();
   }, []);
 
   useEffect(() => {
@@ -302,7 +300,6 @@ export function ScannerPanel({
               value={barcodeInput}
               onChange={(event) => setBarcodeInput(event.target.value)}
               onKeyDown={handleKeyDown}
-              autoFocus
               spellCheck={false}
               autoCapitalize="none"
               autoCorrect="off"

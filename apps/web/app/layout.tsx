@@ -64,6 +64,8 @@ export default function RootLayout({
       <body className="font-body text-on-background selection:bg-primary-fixed">
         <MobileViewportGuard />
         <Navigation />
+        <PwaRegistrar />
+        <InstallPrompt />
         {children}
       </body>
     </html>

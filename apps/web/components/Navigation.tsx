@@ -47,6 +47,15 @@ export function Navigation() {
     );
   }, [collapsed]);
 
+  /* Handle top-bar padding on body */
+  useEffect(() => {
+    if (pathname !== "/" && pathname !== "/login") {
+      document.body.classList.add("has-top-bar");
+    } else {
+      document.body.classList.remove("has-top-bar");
+    }
+  }, [pathname]);
+
   if (pathname === "/login") return null;
 
   const handleSignOut = async () => {
@@ -154,23 +163,25 @@ export function Navigation() {
       {/* ───────────────────────────────────────────
           MOBILE: Fixed Top Bar
       ─────────────────────────────────────────── */}
-      <header className="fixed left-0 right-0 top-0 z-50 flex h-12 sm:h-14 items-center justify-between border-b border-outline-variant/40 bg-white/95 px-2.5 sm:px-4 backdrop-blur-xl md:hidden"
-        style={{ boxShadow: "0 1px 12px rgba(0,0,0,0.06)" }}
-      >
-        <span className="truncate text-sm sm:text-base font-bold text-primary">
-          {storeName || "Clothing POS"}
-        </span>
-        <button
-          onClick={handleSignOut}
-          disabled={signingOut}
-          aria-label="Sign out"
-          className="flex h-10 w-10 items-center justify-center rounded-lg text-on-secondary-container transition-colors hover:bg-surface-container-high active:opacity-70 disabled:opacity-50 touch-action-manipulation"
+      {pathname !== "/" && (
+        <header className="fixed left-0 right-0 top-0 z-50 flex h-12 sm:h-14 items-center justify-between border-b border-outline-variant/40 bg-white/95 px-2.5 sm:px-4 backdrop-blur-xl md:hidden"
+          style={{ boxShadow: "0 1px 12px rgba(0,0,0,0.06)" }}
         >
-          <span className="material-symbols-outlined text-lg sm:text-xl" style={{ fontSize: 20 }}>
-            logout
+          <span className="truncate text-sm sm:text-base font-bold text-primary">
+            {storeName || "Clothing POS"}
           </span>
-        </button>
-      </header>
+          <button
+            onClick={handleSignOut}
+            disabled={signingOut}
+            aria-label="Sign out"
+            className="flex h-10 w-10 items-center justify-center rounded-lg text-on-secondary-container transition-colors hover:bg-surface-container-high active:opacity-70 disabled:opacity-50 touch-action-manipulation"
+          >
+            <span className="material-symbols-outlined text-lg sm:text-xl" style={{ fontSize: 20 }}>
+              logout
+            </span>
+          </button>
+        </header>
+      )}
 
       {/* ───────────────────────────────────────────
           MOBILE: Bottom Tab Bar

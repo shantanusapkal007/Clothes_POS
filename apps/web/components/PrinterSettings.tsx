@@ -361,29 +361,10 @@ export function PrinterSettings({ onClose }: PrinterSettingsProps) {
     }
   ];
 
-  return (
+  const settingsContent = (
     <>
-      {/* Backdrop */}
-      <motion.div
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        exit={{ opacity: 0 }}
-        className="mobile-drawer-backdrop"
-        onClick={onClose}
-      />
-
-      {/* Drawer / Modal */}
-      <motion.div
-        initial={{ y: "100%" }}
-        animate={{ y: 0 }}
-        exit={{ y: "100%" }}
-        transition={{ type: "spring", damping: 30, stiffness: 300 }}
-        className={onClose ? "mobile-drawer" : "flex flex-col h-full"}
-      >
-        {onClose && <div className="mobile-drawer__handle" />}
-
         {/* Header */}
-        <div className="flex items-center justify-between gap-3 border-b border-outline-variant/30 px-4 pb-3 pt-1 md:px-8 md:pb-5 md:pt-4">
+        <div className="flex items-center justify-between gap-3 border-b border-outline-variant/30 px-4 pb-3 pt-3 md:px-8 md:pb-5 md:pt-4">
           <div className="min-w-0">
             <h1 className="font-serif text-xl font-bold tracking-tight text-primary md:text-3xl">
               Settings
@@ -780,7 +761,6 @@ export function PrinterSettings({ onClose }: PrinterSettingsProps) {
             </form>
           )}
         </div>
-      </motion.div>
 
       {/* Bluetooth Device Selector Modal */}
       {showBluetoothSelector && (
@@ -826,5 +806,37 @@ export function PrinterSettings({ onClose }: PrinterSettingsProps) {
         </>
       )}
     </>
+  );
+
+  // ── Modal mode (opened from POS workspace) ──
+  if (onClose) {
+    return (
+      <>
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          className="mobile-drawer-backdrop"
+          onClick={onClose}
+        />
+        <motion.div
+          initial={{ y: "100%" }}
+          animate={{ y: 0 }}
+          exit={{ y: "100%" }}
+          transition={{ type: "spring", damping: 30, stiffness: 300 }}
+          className="mobile-drawer"
+        >
+          <div className="mobile-drawer__handle" />
+          {settingsContent}
+        </motion.div>
+      </>
+    );
+  }
+
+  // ── Standalone mode (settings page) ──
+  return (
+    <div className="flex flex-col h-full">
+      {settingsContent}
+    </div>
   );
 }
