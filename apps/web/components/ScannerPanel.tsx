@@ -82,7 +82,6 @@ export function ScannerPanel({
   const commitBarcode = (rawValue: string) => {
     const trimmed = rawValue.trim();
     if (!trimmed) {
-      focusInput();
       return;
     }
 
@@ -97,7 +96,6 @@ export function ScannerPanel({
     }
 
     onBarcodeSubmit(trimmed);
-    focusInput();
   };
 
   const handleSubmit = (event: FormEvent) => {
@@ -143,7 +141,6 @@ export function ScannerPanel({
     setPricePromptError(null);
 
     onBarcodeSubmit(structured);
-    focusInput();
   };
 
   useEffect(() => {
@@ -161,7 +158,7 @@ export function ScannerPanel({
 
   useEffect(() => {
     if (!cameraOpen) {
-      focusInput();
+      // Removed focusInput() call to prevent keyboard from popping up on mount
       return;
     }
 

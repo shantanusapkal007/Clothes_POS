@@ -48,9 +48,9 @@
     opacity: 1;
   }
 
-  /* Prevent pull-to-refresh on mobile */
+  /* Allow natural scrolling on mobile */
   html, body {
-    overscroll-behavior-y: contain;
+    overscroll-behavior-y: auto;
   }
 }
 
@@ -82,6 +82,11 @@
     padding-bottom: calc(3.5rem + env(safe-area-inset-bottom, 0px));
   }
 
+  .main-content {
+    @apply flex flex-1 flex-col min-w-0;
+    transition: margin-left 0.3s ease;
+  }
+
   /* Desktop layout adjustment */
   @media (min-width: 768px) {
     .app-shell {
@@ -89,9 +94,7 @@
     }
     
     .main-content {
-      @apply flex-1;
       margin-left: var(--sidebar-w, 220px);
-      transition: margin-left 0.3s ease;
     }
   }
 
@@ -124,7 +127,7 @@
   }
 
   .ops-card {
-    @apply rounded-lg border border-outline-variant/40 bg-white/95 px-3 py-2.5 shadow-sm backdrop-blur-xl transition hover:bg-white md:px-4 md:py-3;
+    @apply rounded-lg border border-outline-variant/40 bg-white px-3 py-2.5 shadow-sm transition hover:bg-white md:px-4 md:py-3;
   }
 
   .ops-card strong {
@@ -154,7 +157,7 @@
 
   /* ─── Mobile Tab Switcher ─── */
   .mobile-tab-bar {
-    @apply flex w-full gap-1 rounded-xl bg-surface-container-high/80 p-1 backdrop-blur-lg;
+    @apply flex w-full gap-1 rounded-xl bg-surface-container-high p-1;
   }
 
   .mobile-tab {
@@ -197,7 +200,7 @@
 
   /* ─── Panels ─── */
   .panel {
-    @apply rounded-lg border border-outline-variant/40 bg-white/95 p-3 shadow-[0_20px_60px_rgb(0,0,0,0.04)] backdrop-blur-2xl md:p-6;
+    @apply rounded-lg border border-outline-variant/40 bg-white p-3 shadow-[0_20px_60px_rgb(0,0,0,0.04)] md:p-6;
   }
 
   .panel-heading {
@@ -247,7 +250,7 @@
   }
 
   .button-secondary {
-    @apply border border-white/60 bg-white/50 text-on-surface shadow-[0_4px_12px_rgb(0,0,0,0.02)] backdrop-blur-lg hover:border-white hover:bg-white;
+    @apply border border-white/60 bg-white text-on-surface shadow-[0_4px_12px_rgb(0,0,0,0.02)] hover:border-white hover:bg-white;
   }
 
   .button-ghost {
@@ -259,15 +262,15 @@
   }
 
   .badge-muted {
-    @apply bg-surface-container-high/60 backdrop-blur-md text-on-secondary-container;
+    @apply bg-surface-container-high/60 text-on-secondary-container;
   }
 
   .success-text {
-    @apply mt-3 rounded-lg border border-emerald-200/50 bg-emerald-50/80 backdrop-blur-lg px-3 py-2.5 text-sm text-emerald-800 shadow-[0_8px_30px_rgba(16,185,129,0.08)] md:mt-4 md:px-4 md:py-3;
+    @apply mt-3 rounded-lg border border-emerald-200/50 bg-emerald-50 px-3 py-2.5 text-sm text-emerald-800 shadow-[0_8px_30px_rgba(16,185,129,0.08)] md:mt-4 md:px-4 md:py-3;
   }
 
   .error-card {
-    @apply mt-3 flex flex-col gap-2 rounded-lg border border-error/15 bg-error-container/80 backdrop-blur-lg p-3 shadow-[0_8px_30px_rgba(186,26,26,0.08)] sm:flex-row sm:items-center sm:justify-between md:mt-4 md:gap-3 md:p-4;
+    @apply mt-3 flex flex-col gap-2 rounded-lg border border-error/15 bg-error-container p-3 shadow-[0_8px_30px_rgba(186,26,26,0.08)] sm:flex-row sm:items-center sm:justify-between md:mt-4 md:gap-3 md:p-4;
   }
 
   .error-text {
@@ -275,11 +278,11 @@
   }
 
   .modal-backdrop {
-    @apply fixed inset-0 z-[120] flex items-end justify-center bg-[#1f1a1b]/45 p-0 backdrop-blur-md sm:items-center sm:p-4;
+    @apply fixed inset-0 z-[120] flex items-end justify-center bg-black/40 p-0 sm:items-center sm:p-4;
   }
 
   .modal-card {
-    @apply max-h-[100vh] w-full max-w-2xl overflow-y-auto rounded-t-2xl border-t border-outline-variant/40 bg-white/95 p-4 shadow-[0_40px_100px_rgba(8,47,40,0.18)] backdrop-blur-2xl sm:max-h-[92vh] sm:rounded-lg sm:border sm:p-6 md:p-8;
+    @apply max-h-[100vh] w-full max-w-2xl overflow-y-auto rounded-t-2xl border-t border-outline-variant/40 bg-white p-4 shadow-[0_40px_100px_rgba(8,47,40,0.18)] sm:max-h-[92vh] sm:rounded-lg sm:border sm:p-6 md:p-8;
   }
 
   .inventory-form {
@@ -292,7 +295,7 @@
 
   /* ─── Bottom Tab Bar (Mobile Navigation) ─── */
   .bottom-tab-bar {
-    @apply fixed bottom-0 left-0 right-0 z-50 flex items-stretch border-t border-outline-variant/40 bg-white/95 backdrop-blur-xl md:hidden;
+    @apply fixed bottom-0 left-0 right-0 z-50 flex items-stretch border-t border-outline-variant/40 bg-white md:hidden;
     padding-bottom: env(safe-area-inset-bottom, 0px);
     box-shadow: 0 -4px 30px rgba(31, 26, 27, 0.08);
   }
@@ -316,7 +319,7 @@
 
   /* ─── Compact Cart Item (Mobile) ─── */
   .cart-item-compact {
-    @apply flex items-center gap-3 rounded-lg border border-outline-variant/30 bg-white/95 p-3 shadow-sm;
+    @apply flex items-center gap-3 rounded-lg border border-outline-variant/30 bg-white p-3 shadow-sm;
   }
 
   .cart-item-compact__thumb {
@@ -356,7 +359,7 @@
 
   /* ─── Mobile Drawer ─── */
   .mobile-drawer-backdrop {
-    @apply fixed inset-0 z-[100] bg-[#1f1a1b]/45;
+    @apply fixed inset-0 z-[100] bg-black/40;
     animation: fade-in 0.2s ease-out;
   }
 
@@ -385,7 +388,7 @@
 
 @layer utilities {
   .glass-panel {
-    @apply bg-white/95 backdrop-blur-xl border border-outline-variant/40 shadow-[0_8px_30px_rgb(0,0,0,0.04)];
+    @apply bg-white border border-outline-variant/40 shadow-[0_8px_30px_rgb(0,0,0,0.04)];
   }
 
   .hide-scrollbar {
@@ -407,28 +410,28 @@
   }
 
   .connection-badge.disconnected {
-    @apply bg-surface-container-high/60 backdrop-blur-md text-on-surface-variant opacity-60;
+    @apply bg-surface-container-high/60 text-on-surface-variant opacity-60;
   }
 
   .connection-badge.bluetooth {
-    @apply bg-blue-100/80 backdrop-blur-md text-blue-800 border border-blue-200/50;
+    @apply bg-blue-100 text-blue-800 border border-blue-200/50;
   }
 
   .connection-badge.usb {
-    @apply bg-emerald-100/80 backdrop-blur-md text-emerald-800 border border-emerald-200/50;
+    @apply bg-emerald-100 text-emerald-800 border border-emerald-200/50;
   }
 
   /* Settings message types */
   .settings-message-success {
-    @apply bg-emerald-100/90 backdrop-blur-xl text-emerald-800 px-4 py-3 text-sm border-b border-emerald-200/50;
+    @apply bg-emerald-100 text-emerald-800 px-4 py-3 text-sm border-b border-emerald-200/50;
   }
 
   .settings-message-error {
-    @apply bg-error-container/90 backdrop-blur-xl text-error px-4 py-3 text-sm border-b border-error/20;
+    @apply bg-error-container text-error px-4 py-3 text-sm border-b border-error/20;
   }
 
   .settings-message-info {
-    @apply bg-secondary-container/90 backdrop-blur-xl text-on-secondary-fixed px-4 py-3 text-sm border-b border-secondary/20;
+    @apply bg-secondary-container text-on-secondary-fixed px-4 py-3 text-sm border-b border-secondary/20;
   }
 
   /* safe-area helper */

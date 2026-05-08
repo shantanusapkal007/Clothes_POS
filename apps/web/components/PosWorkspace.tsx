@@ -326,7 +326,7 @@ export function PosWorkspace() {
   return (
     <section className="pos-shell">
       {/* ─── Compact Header ─── */}
-      <header className="z-30 flex items-center gap-2 border-b border-outline-variant/25 bg-white/90 px-2.5 py-2 backdrop-blur-sm sm:px-4 sm:py-3 md:px-4">
+      <header className="z-30 flex items-center gap-2 border-b border-outline-variant/25 bg-white px-2.5 py-2 sm:px-4 sm:py-3 md:px-4">
         <div className="min-w-0 flex-1">
           <h2 className="truncate text-sm font-bold text-on-background sm:text-base md:text-xl">
             {storeName}

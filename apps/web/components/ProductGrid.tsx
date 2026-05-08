@@ -4,15 +4,12 @@ import type { Product } from "../types";
 
 const containerVariants = {
   hidden: { opacity: 0 },
-  show: {
-    opacity: 1,
-    transition: { staggerChildren: 0.02, delayChildren: 0.03 }
-  }
+  show: { opacity: 1, transition: { duration: 0.1 } }
 };
 
 const itemVariants = {
-  hidden: { opacity: 0, scale: 0.95 },
-  show: { opacity: 1, scale: 1, transition: { type: "spring" as const, stiffness: 500, damping: 30 } }
+  hidden: { opacity: 0 },
+  show: { opacity: 1, transition: { duration: 0.1 } }
 };
 
 function getInitials(name: string) {

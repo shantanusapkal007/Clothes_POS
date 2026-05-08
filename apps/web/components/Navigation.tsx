@@ -164,7 +164,7 @@ export function Navigation() {
           MOBILE: Fixed Top Bar
       ─────────────────────────────────────────── */}
       {pathname !== "/" && (
-        <header className="fixed left-0 right-0 top-0 z-50 flex h-12 sm:h-14 items-center justify-between border-b border-outline-variant/40 bg-white/95 px-2.5 sm:px-4 backdrop-blur-xl md:hidden"
+        <header className="fixed left-0 right-0 top-0 z-50 flex h-12 sm:h-14 items-center justify-between border-b border-outline-variant/40 bg-white px-2.5 sm:px-4 md:hidden"
           style={{ boxShadow: "0 1px 12px rgba(0,0,0,0.06)" }}
         >
           <span className="truncate text-sm sm:text-base font-bold text-primary">
