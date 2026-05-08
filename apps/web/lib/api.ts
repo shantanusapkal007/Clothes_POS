@@ -87,3 +87,42 @@ export function checkoutBill(items: CartItem[], paymentMethod: string) {
     })
   });
 }
+
+/* ─── Bill History ─── */
+
+export type BillsListResponse = {
+  bills: BillResponse[];
+  total: number;
+  page: number;
+  limit: number;
+  pages: number;
+};
+
+export function getBills(params?: {
+  page?: number;
+  limit?: number;
+  search?: string;
+  from?: string;
+  to?: string;
+}) {
+  const query = new URLSearchParams();
+  if (params?.page) query.set("page", String(params.page));
+  if (params?.limit) query.set("limit", String(params.limit));
+  if (params?.search) query.set("search", params.search);
+  if (params?.from) query.set("from", params.from);
+  if (params?.to) query.set("to", params.to);
+  const qs = query.toString();
+  return request<BillsListResponse>(`/bills${qs ? `?${qs}` : ""}`);
+}
+
+export function getBill(id: string) {
+  return request<BillResponse>(`/bills/${id}`);
+}
+
+export function refundBill(id: string, reason?: string) {
+  return request<BillResponse>(`/bills/${id}/refund`, {
+    method: "POST",
+    body: JSON.stringify({ reason })
+  });
+}
+

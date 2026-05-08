@@ -32,5 +32,30 @@ export type BillResponse = {
   taxAmount: number;
   finalAmount: number;
   paymentMethod: string;
+  status: string;
+  customerName: string | null;
+  customerPhone: string | null;
+  refundedAt: string | null;
+  refundReason: string | null;
+  createdAt: string;
+  items: BillItemResponse[];
+};
+
+export type BillItemResponse = {
+  id: string;
+  productId: string;
+  productName: string;
+  quantity: number;
+  price: number;
+  discount: number;
+  tax: number;
+  total: number;
+};
+
+export type RefundResponse = {
+  id: string;
+  billId: string;
+  amount: number;
+  reason: string | null;
   createdAt: string;
 };

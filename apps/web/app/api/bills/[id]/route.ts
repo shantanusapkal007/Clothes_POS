@@ -14,22 +14,15 @@ const paramsSchema = z.object({
 
 export async function GET(
   _request: NextRequest,
-  context: {
-    params: Promise<{ id: string }>;
-  }
+  context: { params: Promise<{ id: string }> }
 ) {
   try {
     assertDatabaseConfig();
     const tenant = await requireActiveStore();
     const params = paramsSchema.parse(await context.params);
     const bill = await prisma.bill.findFirst({
-      where: {
-        id: params.id,
-        storeId: tenant.storeId
-      },
-      include: {
-        items: true
-      }
+      where: { id: params.id, storeId: tenant.storeId },
+      include: { items: true, refunds: true }
     });
 
     if (!bill) {

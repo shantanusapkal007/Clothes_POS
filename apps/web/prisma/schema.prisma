@@ -91,14 +91,36 @@ model Bill {
   taxAmount      Decimal      @map("tax_amount") @db.Decimal(10, 2)
   finalAmount    Decimal      @map("final_amount") @db.Decimal(10, 2)
   paymentMethod  String       @map("payment_method")
+  status         String       @default("completed")
+  customerName   String?      @map("customer_name")
+  customerPhone  String?      @map("customer_phone")
+  refundedAt     DateTime?    @map("refunded_at")
+  refundReason   String?      @map("refund_reason")
   createdAt      DateTime     @default(now()) @map("created_at")
   organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
   store          Store        @relation(fields: [storeId], references: [id], onDelete: Cascade)
   items          BillItem[]
+  refunds        Refund[]
 
   @@index([organizationId])
   @@index([storeId])
+  @@index([createdAt])
   @@map("bills")
+}
+
+model Refund {
+  id             String   @id @default(cuid())
+  organizationId String   @map("organization_id")
+  storeId        String   @map("store_id")
+  billId         String   @map("bill_id")
+  amount         Decimal  @db.Decimal(10, 2)
+  reason         String?
+  createdAt      DateTime @default(now()) @map("created_at")
+  bill           Bill     @relation(fields: [billId], references: [id], onDelete: Cascade)
+
+  @@index([billId])
+  @@index([storeId])
+  @@map("refunds")
 }
 
 model BillItem {

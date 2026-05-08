@@ -26,29 +26,61 @@ const checkoutSchema = z.object({
     .min(1)
 });
 
-export async function GET() {
+export async function GET(request: NextRequest) {
   try {
     assertDatabaseConfig();
     const tenant = await requireActiveStore();
-    const bills = await prisma.bill.findMany({
-      where: {
-        storeId: tenant.storeId
-      },
-      include: {
-        items: true
-      },
-      orderBy: {
-        createdAt: "desc"
-      }
-    });
+    const url = new URL(request.url);
+    const page = Math.max(1, Number(url.searchParams.get("page")) || 1);
+    const limit = Math.min(100, Math.max(1, Number(url.searchParams.get("limit")) || 20));
+    const search = url.searchParams.get("search")?.trim() || "";
+    const dateFrom = url.searchParams.get("from") || "";
+    const dateTo = url.searchParams.get("to") || "";
 
-    return NextResponse.json(bills.map(mapBill));
+    const where: Record<string, unknown> = { storeId: tenant.storeId };
+
+    if (search) {
+      where.OR = [
+        { id: { contains: search, mode: "insensitive" } },
+        { customerName: { contains: search, mode: "insensitive" } },
+        { customerPhone: { contains: search, mode: "insensitive" } },
+      ];
+    }
+
+    if (dateFrom || dateTo) {
+      const createdAt: Record<string, Date> = {};
+      if (dateFrom) createdAt.gte = new Date(dateFrom);
+      if (dateTo) {
+        const end = new Date(dateTo);
+        end.setHours(23, 59, 59, 999);
+        createdAt.lte = end;
+      }
+      where.createdAt = createdAt;
+    }
+
+    const [bills, total] = await Promise.all([
+      prisma.bill.findMany({
+        where: where as any,
+        include: { items: true, refunds: true },
+        orderBy: { createdAt: "desc" },
+        skip: (page - 1) * limit,
+        take: limit,
+      }),
+      prisma.bill.count({ where: where as any }),
+    ]);
+
+    return NextResponse.json({
+      bills: bills.map(mapBill),
+      total,
+      page,
+      limit,
+      pages: Math.ceil(total / limit),
+    });
   } catch (error) {
     const message = getErrorMessage(error, "Unable to load bills");
     return NextResponse.json({ message }, { status: getTenantErrorStatus(error, 500) });
   }
 }
-
 export async function POST(request: NextRequest) {
   try {
     assertDatabaseConfig();

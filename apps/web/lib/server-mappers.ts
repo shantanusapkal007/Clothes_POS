@@ -1,4 +1,4 @@
-import type { Bill, BillItem, Product } from "@prisma/client";
+import type { Bill, BillItem, Product, Refund } from "@prisma/client";
 
 export function mapProduct(product: Product) {
   return {
@@ -20,6 +20,7 @@ export function mapProduct(product: Product) {
 export function mapBill(
   bill: Bill & {
     items?: BillItem[];
+    refunds?: Refund[];
   }
 ) {
   return {
@@ -29,6 +30,11 @@ export function mapBill(
     taxAmount: Number(bill.taxAmount),
     finalAmount: Number(bill.finalAmount),
     paymentMethod: bill.paymentMethod,
+    status: bill.status,
+    customerName: bill.customerName,
+    customerPhone: bill.customerPhone,
+    refundedAt: bill.refundedAt,
+    refundReason: bill.refundReason,
     createdAt: bill.createdAt,
     items:
       bill.items?.map((item) => ({
@@ -40,6 +46,15 @@ export function mapBill(
         tax: Number(item.tax),
         total: Number(item.total),
         productName: item.productName
+      })) ?? [],
+    refunds:
+      bill.refunds?.map((r) => ({
+        id: r.id,
+        billId: r.billId,
+        amount: Number(r.amount),
+        reason: r.reason,
+        createdAt: r.createdAt
       })) ?? []
   };
 }
+
