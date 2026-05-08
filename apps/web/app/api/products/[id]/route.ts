@@ -5,6 +5,7 @@ import { assertDatabaseConfig } from "../../../../lib/database-url";
 import { getApiErrorStatus, getErrorMessage } from "../../../../lib/errors";
 import { prisma } from "../../../../lib/prisma";
 import { mapProduct } from "../../../../lib/server-mappers";
+import { getTenantErrorStatus, requireActiveStore } from "../../../../lib/tenant";
 
 export const runtime = "nodejs";
 
@@ -34,8 +35,19 @@ export async function PUT(
 ) {
   try {
     assertDatabaseConfig();
+    const tenant = await requireActiveStore();
     const params = paramsSchema.parse(await context.params);
     const body = updateSchema.parse(await request.json());
+    const existing = await prisma.product.findFirst({
+      where: {
+        id: params.id,
+        storeId: tenant.storeId
+      }
+    });
+
+    if (!existing) {
+      return NextResponse.json({ message: "Product not found" }, { status: 404 });
+    }
 
     const product = await prisma.product.update({
       where: { id: params.id },
@@ -56,7 +68,7 @@ export async function PUT(
     return NextResponse.json(mapProduct(product));
   } catch (error) {
     const message = getErrorMessage(error, "Unable to update product");
-    return NextResponse.json({ message }, { status: getApiErrorStatus(error, 400) });
+    return NextResponse.json({ message }, { status: getTenantErrorStatus(error, getApiErrorStatus(error, 400)) });
   }
 }
 
@@ -68,16 +80,22 @@ export async function DELETE(
 ) {
   try {
     assertDatabaseConfig();
+    const tenant = await requireActiveStore();
     const params = paramsSchema.parse(await context.params);
-    await prisma.product.delete({
+    const deleted = await prisma.product.deleteMany({
       where: {
-        id: params.id
+        id: params.id,
+        storeId: tenant.storeId
       }
     });
+
+    if (deleted.count === 0) {
+      return NextResponse.json({ message: "Product not found" }, { status: 404 });
+    }
 
     return new NextResponse(null, { status: 204 });
   } catch (error) {
     const message = getErrorMessage(error, "Unable to delete product");
-    return NextResponse.json({ message }, { status: getApiErrorStatus(error, 400) });
+    return NextResponse.json({ message }, { status: getTenantErrorStatus(error, getApiErrorStatus(error, 400)) });
   }
 }

@@ -18,6 +18,15 @@ const checkoutSchema = z.object({
     )
     .min(1)
 });
+const tenantHeadersSchema = z.object({
+  "x-organization-id": z.string().min(1),
+  "x-store-id": z.string().min(1),
+  "x-user-id": z.string().optional()
+});
+
+function getTenant(headers: unknown) {
+  return tenantHeadersSchema.parse(headers);
+}
 
 const mapBill = (bill: {
   id: string;
@@ -59,8 +68,12 @@ const mapBill = (bill: {
 });
 
 const billRoutes: FastifyPluginAsync = async (fastify) => {
-  fastify.get("/", async () => {
+  fastify.get("/", async (request) => {
+    const tenant = getTenant(request.headers);
     const bills = await fastify.prisma.bill.findMany({
+      where: {
+        storeId: tenant["x-store-id"]
+      },
       include: { items: true },
       orderBy: {
         createdAt: "desc"
@@ -71,9 +84,13 @@ const billRoutes: FastifyPluginAsync = async (fastify) => {
   });
 
   fastify.get("/:id", async (request, reply) => {
+    const tenant = getTenant(request.headers);
     const params = z.object({ id: z.string().min(1) }).parse(request.params);
-    const bill = await fastify.prisma.bill.findUnique({
-      where: { id: params.id },
+    const bill = await fastify.prisma.bill.findFirst({
+      where: {
+        id: params.id,
+        storeId: tenant["x-store-id"]
+      },
       include: { items: true }
     });
 
@@ -85,10 +102,12 @@ const billRoutes: FastifyPluginAsync = async (fastify) => {
   });
 
   fastify.post("/", async (request, reply) => {
+    const tenant = getTenant(request.headers);
     const body = checkoutSchema.parse(request.body);
     const productIds = body.items.map((item) => item.productId);
     const products = await fastify.prisma.product.findMany({
       where: {
+        storeId: tenant["x-store-id"],
         id: {
           in: productIds
         }
@@ -115,6 +134,9 @@ const billRoutes: FastifyPluginAsync = async (fastify) => {
     const bill = await fastify.prisma.$transaction(async (tx) => {
       const createdBill = await tx.bill.create({
         data: {
+          organizationId: tenant["x-organization-id"],
+          storeId: tenant["x-store-id"],
+          cashierUserId: tenant["x-user-id"] ?? null,
           totalAmount: new Decimal(summary.totalAmount),
           discountAmount: new Decimal(summary.discountAmount),
           taxAmount: new Decimal(summary.taxAmount),
@@ -128,6 +150,8 @@ const billRoutes: FastifyPluginAsync = async (fastify) => {
 
         await tx.billItem.create({
           data: {
+            organizationId: tenant["x-organization-id"],
+            storeId: tenant["x-store-id"],
             billId: createdBill.id,
             productId: item.productId,
             quantity: item.quantity,

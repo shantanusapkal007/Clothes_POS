@@ -40,7 +40,7 @@ export function buildWhatsAppBillMessage(
     billLayout.companyPhone ||
     STORE_WHATSAPP_NUMBER;
 
-  lines.push(`${billLayout.companyName || "Friends Boutique"} Bill`);
+  lines.push(`${billLayout.companyName || "Clothing Store"} Bill`);
   lines.push(`Bill No: ${billNumber}`);
   lines.push(`Payment: ${paymentMethod.toUpperCase()}`);
   lines.push(`Date: ${formatMessageDate(bill.createdAt)}`);

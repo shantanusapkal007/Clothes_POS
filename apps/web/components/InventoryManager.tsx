@@ -111,7 +111,7 @@ export function InventoryManager() {
   const getProductImage = (name: string) => {
     return `https://ui-avatars.com/api/?name=${encodeURIComponent(
       name
-    )}&background=ccfbf1&color=0f766e&size=128&font-size=0.3`;
+    )}&background=ffe4e6&color=9f1239&size=128&font-size=0.3`;
   };
 
   return (

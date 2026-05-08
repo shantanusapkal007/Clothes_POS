@@ -21,6 +21,7 @@ import {
   printReceipt
 } from "../lib/printer";
 import { buildWhatsAppBillMessage, openWhatsAppShare } from "../lib/whatsapp";
+import { useStoreName } from "../lib/store-settings";
 import type { Product } from "../types";
 
 import { ProductSkeleton } from "./Skeleton";
@@ -63,6 +64,7 @@ type MobileView = "products" | "cart";
 
 export function PosWorkspace() {
   const { addItem, items, clearCart, updateItem } = useCartStore();
+  const storeName = useStoreName();
   const [products, setProducts] = useState<Product[]>([]);
   const [search, setSearch] = useState("");
   const [barcodeInput, setBarcodeInput] = useState("");
@@ -285,9 +287,9 @@ export function PosWorkspace() {
         );
 
         if (printRoute === "device") {
-          nextMessage = `${nextMessage} — sent to printer`;
+          nextMessage = `${nextMessage} - sent to printer`;
         } else if (printRoute === "browser") {
-          nextMessage = `${nextMessage} — print preview opened`;
+          nextMessage = `${nextMessage} - print preview opened`;
         } else {
           setError("Bill saved, but printing failed. Check the printer connection.");
         }
@@ -322,28 +324,49 @@ export function PosWorkspace() {
   };
 
   return (
-    <>
-      {/* ─── Stats Strip ─── */}
-      <section className="ops-strip">
-        <div className="ops-card">
-          <span className="ops-label">Catalog</span>
-          <strong>{products.length}</strong>
-          <span className="ops-help">products loaded</span>
+    <section className="pos-shell">
+      {/* ─── Header with Quick Stats ─── */}
+      <header className="z-30 border-b border-outline-variant/25 bg-white/90 p-3 backdrop-blur-sm sm:p-4">
+        <div className="mb-3 flex items-center justify-between gap-3">
+          <div className="min-w-0">
+            <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-on-secondary-container">
+              Sales counter
+            </p>
+            <h2 className="truncate font-headline text-xl font-bold text-on-background sm:text-2xl">
+              {storeName}
+            </h2>
+          </div>
+          <button
+            className="button button-secondary button-small shrink-0"
+            onClick={() => setPrinterSettingsOpen(true)}
+            title="Settings"
+            type="button"
+          >
+            <span className="material-symbols-outlined text-[18px]">settings</span>
+            <span className="hidden sm:inline">Settings</span>
+          </button>
         </div>
-        <div className="ops-card">
-          <span className="ops-label">Cart</span>
-          <strong>{items.length}</strong>
-          <span className="ops-help">line items</span>
+        <div className="ops-strip">
+          <div className="ops-card">
+            <span className="ops-label">Catalog</span>
+            <strong className="text-lg">{products.length}</strong>
+            <span className="ops-help">products</span>
+          </div>
+          <div className="ops-card">
+            <span className="ops-label">Cart</span>
+            <strong className="text-lg">{items.length}</strong>
+            <span className="ops-help">items</span>
+          </div>
+          <div className="ops-card bg-gradient-to-br from-primary-container to-primary-container/70">
+            <span className="ops-label text-on-primary-container">Total</span>
+            <strong className="text-lg text-on-primary-container">Rs {cartSummary.finalAmount.toFixed(0)}</strong>
+            <span className="ops-help text-on-primary-container">payable</span>
+          </div>
         </div>
-        <div className="ops-card">
-          <span className="ops-label">Payable</span>
-          <strong>₹{cartSummary.finalAmount.toFixed(0)}</strong>
-          <span className="ops-help">live checkout total</span>
-        </div>
-      </section>
+      </header>
 
-      {/* ─── Mobile Tab Switcher (visible < xl) ─── */}
-      <div className="mb-3 xl:hidden">
+      {/* ─── Mobile Tab Switcher ─── */}
+      <div className="block xl:hidden px-4 py-3 border-b border-outline-variant/20">
         <div className="mobile-tab-bar">
           <button
             type="button"
@@ -369,72 +392,98 @@ export function PosWorkspace() {
         </div>
       </div>
 
-      {/* ─── Workspace Grid ─── */}
-      <div className="workspace-grid">
-        {/* Left: Products — hidden on mobile when cart tab is active */}
-        <div className={`workspace-left ${mobileView === "cart" ? "hidden xl:block" : ""}`}>
-          <ScannerPanel
-            barcodeInput={barcodeInput}
-            setBarcodeInput={setBarcodeInput}
-            onBarcodeSubmit={handleBarcodeSubmit}
-          />
-
-          <section className="panel">
-            <div className="panel-heading">
-              <div>
-                <p className="eyebrow">Search</p>
-                <h2>Fast product lookup</h2>
-              </div>
-            </div>
-            <input
-              className="text-input"
-              placeholder="Search by name, category, or barcode"
-              value={search}
-              onChange={(event) => setSearch(event.target.value)}
+      {/* ─── Main Content Area ─── */}
+      <div className="flex flex-1 flex-col overflow-hidden xl:flex-row">
+        {/* ─── LEFT: Products Panel ─── */}
+        <div className={`flex flex-col overflow-hidden ${mobileView === "cart" ? "hidden xl:flex" : "flex"} xl:flex-1 xl:border-r xl:border-outline-variant/20`}>
+          {/* Search & Scanner */}
+          <div className="flex-shrink-0 space-y-3 border-b border-outline-variant/20 bg-surface-dim p-4 sm:p-6">
+            <ScannerPanel
+              barcodeInput={barcodeInput}
+              setBarcodeInput={setBarcodeInput}
+              onBarcodeSubmit={handleBarcodeSubmit}
             />
-          </section>
 
-          {loading ? (
-            <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4 md:gap-6">
-              {Array.from({ length: 8 }).map((_, i) => (
-                <ProductSkeleton key={i} />
-              ))}
+            <div className="space-y-2">
+              <label className="block">
+                <span className="mb-2 block text-xs font-bold uppercase tracking-wider text-on-surface-variant">
+                  Search Products
+                </span>
+                <input
+                  className="text-input w-full"
+                  placeholder="Search by name, category, or code..."
+                  value={search}
+                  onChange={(event) => setSearch(event.target.value)}
+                />
+              </label>
             </div>
-          ) : (
-            <ProductGrid products={visibleProducts} onAdd={handleProductAdd} />
-          )}
+          </div>
+
+          {/* Product Grid */}
+          <div className="flex-1 overflow-y-auto p-4 sm:p-6">
+            {loading ? (
+              <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4 lg:gap-4">
+                {Array.from({ length: 8 }).map((_, i) => (
+                  <ProductSkeleton key={i} />
+                ))}
+              </div>
+            ) : visibleProducts.length > 0 ? (
+              <ProductGrid products={visibleProducts} onAdd={handleProductAdd} />
+            ) : (
+              <div className="flex flex-col items-center justify-center py-16 text-center">
+                <span className="material-symbols-outlined text-4xl text-on-surface-variant mb-3">
+                  inventory_2
+                </span>
+                <p className="font-semibold text-on-surface">No products found</p>
+                <p className="mt-1 text-sm text-on-secondary-container">
+                  {search ? "Try adjusting your search" : "Add products to get started"}
+                </p>
+              </div>
+            )}
+          </div>
         </div>
 
-        {/* Right: Cart — hidden on mobile when products tab is active */}
-        <div className={`workspace-right ${mobileView === "products" ? "hidden xl:block" : ""}`}>
-          <div className="panel-options">
+        {/* ─── RIGHT: Cart & Checkout Panel ─── */}
+        <div className={`flex flex-col overflow-hidden ${mobileView === "products" ? "hidden xl:flex" : "flex"} xl:flex-1 xl:max-w-lg`}>
+          {/* Cart Toolbar */}
+          <div className="flex-shrink-0 border-b border-outline-variant/20 bg-surface-dim px-4 py-3 flex items-center justify-between sm:px-6">
+            <h3 className="font-bold text-on-surface">Shopping Cart</h3>
             <button
               className="button button-secondary button-small"
               onClick={() => setPrinterSettingsOpen(true)}
-              title="Configure thermal printer and bill layout"
+              title="Configure printer and bill layout"
             >
-              <span className="material-symbols-outlined text-[16px] mr-1.5">print</span>
-              Printer
-            </button>
-            <button
-              className="button button-ghost button-small"
-              type="button"
-              onClick={() => void loadProducts()}
-            >
-              Refresh
+              <span className="material-symbols-outlined text-[16px]">print</span>
+              <span className="hidden sm:inline">Printer</span>
             </button>
           </div>
 
-          <CartPanel
-            onCheckout={handleCheckout}
-            checkoutPending={checkoutPending}
-            onOpenPrinterSettings={() => setPrinterSettingsOpen(true)}
-            storeWhatsAppNumber={STORE_WHATSAPP_NUMBER}
-          />
+          {/* Cart Content */}
+          <div className="flex-1 overflow-y-auto">
+            <CartPanel
+              onCheckout={handleCheckout}
+              checkoutPending={checkoutPending}
+              onOpenPrinterSettings={() => setPrinterSettingsOpen(true)}
+              storeWhatsAppNumber={STORE_WHATSAPP_NUMBER}
+            />
+          </div>
+
+          {/* Cart Footer */}
+          {items.length > 0 && (
+            <div className="border-t border-outline-variant/20 bg-surface-dim p-4 space-y-3 sm:p-6">
+              <button
+                className="button button-primary w-full"
+                onClick={() => void loadProducts()}
+              >
+                <span className="material-symbols-outlined">refresh</span>
+                Reload Products
+              </button>
+            </div>
+          )}
         </div>
       </div>
 
-      {/* ─── Floating Cart Badge (mobile only, when on products tab with items) ─── */}
+      {/* ─── Floating Cart Badge (mobile only) ─── */}
       {mobileView === "products" && items.length > 0 && (
         <button
           type="button"
@@ -442,35 +491,40 @@ export function PosWorkspace() {
           onClick={() => setMobileView("cart")}
         >
           <span className="material-symbols-outlined text-xl">shopping_cart</span>
-          <span>{items.length} — ₹{cartSummary.finalAmount.toFixed(0)}</span>
+          <span>{items.length} - Rs {cartSummary.finalAmount.toFixed(0)}</span>
         </button>
       )}
 
       {/* ─── Status Messages ─── */}
       <AnimatePresence>
         {message ? (
-          <motion.p
-            initial={{ opacity: 0, y: 10 }}
+          <motion.div
+            initial={{ opacity: 0, y: -20 }}
             animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -10 }}
-            className="success-text"
+            exit={{ opacity: 0, y: -20 }}
+            className="fixed bottom-20 left-1/2 -translate-x-1/2 z-50 rounded-lg bg-green-50 px-4 py-3 text-sm font-medium text-green-800 border border-green-200 shadow-lg"
           >
             {message}
-          </motion.p>
+          </motion.div>
         ) : null}
       </AnimatePresence>
 
       {error ? (
-        <div className="error-card">
-          <p className="error-text">{error}</p>
+        <motion.div
+          initial={{ opacity: 0, y: -20 }}
+          animate={{ opacity: 1, y: 0 }}
+          exit={{ opacity: 0, y: -20 }}
+          className="fixed bottom-20 left-1/2 -translate-x-1/2 z-50 rounded-lg bg-red-50 border border-red-200 p-4 shadow-lg max-w-sm"
+        >
+          <p className="text-sm font-medium text-red-800 mb-3">{error}</p>
           <button
-            className="button button-secondary"
+            className="button button-secondary button-small w-full"
             type="button"
             onClick={() => void loadProducts()}
           >
             Retry
           </button>
-        </div>
+        </motion.div>
       ) : null}
 
       {/* ─── Modals ─── */}
@@ -514,6 +568,6 @@ export function PosWorkspace() {
         }}
         onCreate={handleCreateProduct}
       />
-    </>
+    </section>
   );
 }

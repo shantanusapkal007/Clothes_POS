@@ -4,6 +4,7 @@ import { assertDatabaseConfig } from "../../../../lib/database-url";
 import { getErrorMessage } from "../../../../lib/errors";
 import { prisma } from "../../../../lib/prisma";
 import { mapBill } from "../../../../lib/server-mappers";
+import { getTenantErrorStatus, requireActiveStore } from "../../../../lib/tenant";
 
 export const runtime = "nodejs";
 
@@ -19,10 +20,12 @@ export async function GET(
 ) {
   try {
     assertDatabaseConfig();
+    const tenant = await requireActiveStore();
     const params = paramsSchema.parse(await context.params);
-    const bill = await prisma.bill.findUnique({
+    const bill = await prisma.bill.findFirst({
       where: {
-        id: params.id
+        id: params.id,
+        storeId: tenant.storeId
       },
       include: {
         items: true
@@ -36,6 +39,6 @@ export async function GET(
     return NextResponse.json(mapBill(bill));
   } catch (error) {
     const message = getErrorMessage(error, "Unable to load bill");
-    return NextResponse.json({ message }, { status: 500 });
+    return NextResponse.json({ message }, { status: getTenantErrorStatus(error, 500) });
   }
 }

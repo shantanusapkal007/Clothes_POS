@@ -6,6 +6,7 @@ import { assertDatabaseConfig } from "../../../lib/database-url";
 import { getApiErrorStatus, getErrorMessage } from "../../../lib/errors";
 import { prisma } from "../../../lib/prisma";
 import { mapBill } from "../../../lib/server-mappers";
+import { getTenantErrorStatus, requireActiveStore } from "../../../lib/tenant";
 
 export const runtime = "nodejs";
 
@@ -28,7 +29,11 @@ const checkoutSchema = z.object({
 export async function GET() {
   try {
     assertDatabaseConfig();
+    const tenant = await requireActiveStore();
     const bills = await prisma.bill.findMany({
+      where: {
+        storeId: tenant.storeId
+      },
       include: {
         items: true
       },
@@ -40,17 +45,19 @@ export async function GET() {
     return NextResponse.json(bills.map(mapBill));
   } catch (error) {
     const message = getErrorMessage(error, "Unable to load bills");
-    return NextResponse.json({ message }, { status: 500 });
+    return NextResponse.json({ message }, { status: getTenantErrorStatus(error, 500) });
   }
 }
 
 export async function POST(request: NextRequest) {
   try {
     assertDatabaseConfig();
+    const tenant = await requireActiveStore();
     const body = checkoutSchema.parse(await request.json());
     const productIds = body.items.map((item) => item.productId);
     const products = await prisma.product.findMany({
       where: {
+        storeId: tenant.storeId,
         id: {
           in: productIds
         }
@@ -81,6 +88,9 @@ export async function POST(request: NextRequest) {
     const bill = await prisma.$transaction(async (tx) => {
       const createdBill = await tx.bill.create({
         data: {
+          organizationId: tenant.organizationId,
+          storeId: tenant.storeId,
+          cashierUserId: tenant.user.id,
           totalAmount: new Decimal(summary.totalAmount),
           discountAmount: new Decimal(summary.discountAmount),
           taxAmount: new Decimal(summary.taxAmount),
@@ -94,6 +104,8 @@ export async function POST(request: NextRequest) {
 
         await tx.billItem.create({
           data: {
+            organizationId: tenant.organizationId,
+            storeId: tenant.storeId,
             billId: createdBill.id,
             productId: item.productId,
             quantity: item.quantity,
@@ -136,6 +148,6 @@ export async function POST(request: NextRequest) {
     );
   } catch (error) {
     const message = getErrorMessage(error, "Unable to save bill");
-    return NextResponse.json({ message }, { status: getApiErrorStatus(error, 400) });
+    return NextResponse.json({ message }, { status: getTenantErrorStatus(error, getApiErrorStatus(error, 400)) });
   }
 }

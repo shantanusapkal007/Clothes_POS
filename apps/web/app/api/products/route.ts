@@ -5,6 +5,7 @@ import { assertDatabaseConfig } from "../../../lib/database-url";
 import { getApiErrorStatus, getErrorMessage } from "../../../lib/errors";
 import { prisma } from "../../../lib/prisma";
 import { mapProduct } from "../../../lib/server-mappers";
+import { getTenantErrorStatus, requireActiveStore } from "../../../lib/tenant";
 
 export const runtime = "nodejs";
 
@@ -23,18 +24,22 @@ const productSchema = z.object({
 export async function GET(request: NextRequest) {
   try {
     assertDatabaseConfig();
+    const tenant = await requireActiveStore();
     const search = request.nextUrl.searchParams.get("search")?.trim();
 
     const products = await prisma.product.findMany({
-      where: search
-        ? {
-            OR: [
-              { name: { contains: search, mode: "insensitive" } },
-              { category: { contains: search, mode: "insensitive" } },
-              { barcode: { contains: search, mode: "insensitive" } }
-            ]
-          }
-        : undefined,
+      where: {
+        storeId: tenant.storeId,
+        ...(search
+          ? {
+              OR: [
+                { name: { contains: search, mode: "insensitive" } },
+                { category: { contains: search, mode: "insensitive" } },
+                { barcode: { contains: search, mode: "insensitive" } }
+              ]
+            }
+          : {})
+      },
       orderBy: {
         updatedAt: "desc"
       }
@@ -43,16 +48,19 @@ export async function GET(request: NextRequest) {
     return NextResponse.json(products.map(mapProduct));
   } catch (error) {
     const message = getErrorMessage(error, "Unable to load products");
-    return NextResponse.json({ message }, { status: 500 });
+    return NextResponse.json({ message }, { status: getTenantErrorStatus(error, 500) });
   }
 }
 
 export async function POST(request: NextRequest) {
   try {
     assertDatabaseConfig();
+    const tenant = await requireActiveStore();
     const body = productSchema.parse(await request.json());
     const product = await prisma.product.create({
       data: {
+        organizationId: tenant.organizationId,
+        storeId: tenant.storeId,
         name: body.name,
         category: body.category ?? null,
         barcode: body.barcode || null,
@@ -68,6 +76,6 @@ export async function POST(request: NextRequest) {
     return NextResponse.json(mapProduct(product), { status: 201 });
   } catch (error) {
     const message = getErrorMessage(error, "Unable to create product");
-    return NextResponse.json({ message }, { status: getApiErrorStatus(error, 400) });
+    return NextResponse.json({ message }, { status: getTenantErrorStatus(error, getApiErrorStatus(error, 400)) });
   }
 }

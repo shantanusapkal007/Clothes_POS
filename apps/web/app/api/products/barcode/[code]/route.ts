@@ -4,6 +4,7 @@ import { assertDatabaseConfig } from "../../../../../lib/database-url";
 import { getErrorMessage } from "../../../../../lib/errors";
 import { prisma } from "../../../../../lib/prisma";
 import { mapProduct } from "../../../../../lib/server-mappers";
+import { getTenantErrorStatus, requireActiveStore } from "../../../../../lib/tenant";
 
 export const runtime = "nodejs";
 
@@ -19,9 +20,11 @@ export async function GET(
 ) {
   try {
     assertDatabaseConfig();
+    const tenant = await requireActiveStore();
     const params = paramsSchema.parse(await context.params);
-    const product = await prisma.product.findUnique({
+    const product = await prisma.product.findFirst({
       where: {
+        storeId: tenant.storeId,
         barcode: params.code
       }
     });
@@ -33,6 +36,6 @@ export async function GET(
     return NextResponse.json(mapProduct(product));
   } catch (error) {
     const message = getErrorMessage(error, "Unable to load product");
-    return NextResponse.json({ message }, { status: 500 });
+    return NextResponse.json({ message }, { status: getTenantErrorStatus(error, 500) });
   }
 }

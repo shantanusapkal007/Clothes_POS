@@ -8,6 +8,14 @@
 
 export type ConnectionType = "usb" | "serial" | "bluetooth" | "rawbt" | "none";
 
+export interface BluetoothDeviceInfo {
+  id: string;
+  name: string;
+  address?: string;
+  lastConnected?: number;
+  savedManually?: boolean;
+}
+
 export interface PrinterConfig {
   name: string;
   connectionType: ConnectionType;
@@ -61,6 +69,7 @@ export type PrintTransportResult = "device" | "browser" | "failed";
 
 const PRINTER_STORAGE_KEY = "printer-config";
 const BILL_LAYOUT_STORAGE_KEY = "bill-layout-config";
+const PAIRED_BT_DEVICES_STORAGE_KEY = "paired-bt-devices";
 
 export const STORE_WHATSAPP_NUMBER = "+919552884468";
 
@@ -104,7 +113,7 @@ export const DEFAULT_PRINTER_CONFIG: PrinterConfig = {
 };
 
 export const DEFAULT_BILL_LAYOUT: BillLayoutConfig = {
-  companyName: "Friends Boutique",
+  companyName: "Clothing Store",
   companyPhone: STORE_WHATSAPP_NUMBER,
   whatsappSenderPhone: STORE_WHATSAPP_NUMBER,
   showItemDetails: true,
@@ -238,6 +247,65 @@ export function saveBillLayoutConfig(config: Partial<BillLayoutConfig>): void {
   const current = getBillLayoutConfig();
   const updated = normalizeBillLayoutConfig({ ...current, ...config });
   localStorage.setItem(BILL_LAYOUT_STORAGE_KEY, JSON.stringify(updated));
+}
+
+/**
+ * Get all paired Bluetooth devices from storage
+ * Includes devices previously connected or manually added
+ */
+export function getPairedBluetoothDevices(): BluetoothDeviceInfo[] {
+  if (typeof window === "undefined") {
+    return [];
+  }
+
+  const stored = localStorage.getItem(PAIRED_BT_DEVICES_STORAGE_KEY);
+  if (!stored) {
+    return [];
+  }
+
+  try {
+    const devices = JSON.parse(stored) as BluetoothDeviceInfo[];
+    return Array.isArray(devices) ? devices : [];
+  } catch {
+    return [];
+  }
+}
+
+/**
+ * Add or update a paired Bluetooth device in storage
+ */
+export function savePairedBluetoothDevice(device: BluetoothDeviceInfo): void {
+  if (typeof window === "undefined") {
+    return;
+  }
+
+  const devices = getPairedBluetoothDevices();
+  const existing = devices.findIndex((d) => d.id === device.id);
+  
+  const updated: BluetoothDeviceInfo = {
+    ...device,
+    lastConnected: Date.now(),
+  };
+
+  if (existing >= 0) {
+    devices[existing] = updated;
+  } else {
+    devices.push(updated);
+  }
+
+  localStorage.setItem(PAIRED_BT_DEVICES_STORAGE_KEY, JSON.stringify(devices));
+}
+
+/**
+ * Remove a paired Bluetooth device from storage
+ */
+export function removePairedBluetoothDevice(deviceId: string): void {
+  if (typeof window === "undefined") {
+    return;
+  }
+
+  const devices = getPairedBluetoothDevices().filter((d) => d.id !== deviceId);
+  localStorage.setItem(PAIRED_BT_DEVICES_STORAGE_KEY, JSON.stringify(devices));
 }
 
 function formatAmount(value: number): string {
@@ -724,12 +792,15 @@ export async function sendSerialData(
     }
 
     const writer = port.writable.getWriter();
-    const chunkSize = 256;
-    for (let offset = 0; offset < data.length; offset += chunkSize) {
-      await writer.write(data.slice(offset, offset + chunkSize));
-      await new Promise((resolve) => setTimeout(resolve, 10));
+    try {
+      const chunkSize = 256;
+      for (let offset = 0; offset < data.length; offset += chunkSize) {
+        await writer.write(data.slice(offset, offset + chunkSize));
+        await new Promise((resolve) => setTimeout(resolve, 10));
+      }
+    } finally {
+      writer.releaseLock();
     }
-    writer.releaseLock();
     return true;
   } catch {
     try {
@@ -800,30 +871,49 @@ export function sendViaRawBt(data: Uint8Array): boolean {
 export async function getAvailableBluetoothPrinters(): Promise<
   PrinterConfig[]
 > {
+  const pairedDevices = getPairedBluetoothDevices();
+  const pairedPrinterConfigs = pairedDevices.map((device) => ({
+    name: device.name || "Paired Printer",
+    connectionType: "bluetooth" as const,
+    bluetoothDeviceId: device.id,
+    width: 80,
+    connected: false,
+  }));
+
   if (!isBluetoothAvailable()) {
-    return [];
+    return pairedPrinterConfigs;
   }
 
+  let devices: PrinterConfig[] = [];
   const bluetoothNavigator = (navigator as any).bluetooth as {
     getDevices?: () => Promise<any[]>;
   };
 
-  if (typeof bluetoothNavigator.getDevices !== "function") {
-    return [];
+  // Try to get devices from Web Bluetooth API (works on Android, Chrome)
+  if (typeof bluetoothNavigator.getDevices === "function") {
+    try {
+      const apiDevices = await bluetoothNavigator.getDevices();
+      devices = apiDevices.map((device: any) => ({
+        name: device.name || "Bluetooth Printer",
+        connectionType: "bluetooth",
+        bluetoothDeviceId: device.id,
+        width: 80,
+        connected: false,
+      }));
+    } catch {
+      // Ignore API errors
+    }
   }
 
-  try {
-    const devices = await bluetoothNavigator.getDevices();
-    return devices.map((device: any) => ({
-      name: device.name || "Bluetooth Printer",
-      connectionType: "bluetooth",
-      bluetoothDeviceId: device.id,
-      width: 80,
-      connected: false,
-    }));
-  } catch {
-    return [];
+  // Merge, removing duplicates by ID
+  const merged = [...devices];
+  for (const paired of pairedPrinterConfigs) {
+    if (!merged.find((d) => d.bluetoothDeviceId === paired.bluetoothDeviceId)) {
+      merged.push(paired);
+    }
   }
+
+  return merged;
 }
 
 async function hydrateBluetoothDevice(config?: PrinterConfig): Promise<any> {
@@ -831,7 +921,7 @@ async function hydrateBluetoothDevice(config?: PrinterConfig): Promise<any> {
     return bluetoothDevice;
   }
 
-  if (!config?.bluetoothDeviceId) {
+  if (!config?.bluetoothDeviceId || !isBluetoothAvailable()) {
     return null;
   }
 
@@ -877,6 +967,10 @@ export async function requestBluetoothPrinter(): Promise<PrinterConfig | null> {
 }
 
 export async function connectBluetoothPrinter(config?: PrinterConfig) {
+  if (!isBluetoothAvailable()) {
+    return null;
+  }
+
   const device = (await hydrateBluetoothDevice(config)) ?? bluetoothDevice;
   if (!device?.gatt) {
     return null;
@@ -886,6 +980,14 @@ export async function connectBluetoothPrinter(config?: PrinterConfig) {
     const server = device.gatt.connected
       ? device.gatt
       : await device.gatt.connect();
+
+    // Save device as paired for future use (especially important for iOS)
+    if (device.id && device.name) {
+      savePairedBluetoothDevice({
+        id: device.id,
+        name: device.name,
+      });
+    }
 
     for (const serviceUuid of BT_PRINTER_SERVICE_UUIDS) {
       try {
@@ -985,6 +1087,20 @@ export function disconnectBluetoothPrinter(): void {
   }
   bluetoothDevice = null;
   bluetoothCharacteristic = null;
+}
+
+/**
+ * For iOS users: manually add a Bluetooth printer device
+ * Allows users to enter device name/UUID when Web Bluetooth enumeration fails
+ */
+export function addManualBluetoothDevice(name: string): BluetoothDeviceInfo {
+  const device: BluetoothDeviceInfo = {
+    id: `manual-${Date.now()}-${Math.random().toString(36).slice(2)}`,
+    name: name || "Bluetooth Printer",
+    savedManually: true,
+  };
+  savePairedBluetoothDevice(device);
+  return device;
 }
 
 async function findUsbDevice(config: PrinterConfig): Promise<any> {
@@ -1288,4 +1404,3 @@ export async function printReceipt(
   // This is the most reliable path for iOS Safari.
   return openBrowserPrintWindow(content, layout) ? "browser" : "failed";
 }
-

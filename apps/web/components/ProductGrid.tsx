@@ -1,3 +1,4 @@
+import { memo } from "react";
 import { motion } from "framer-motion";
 import type { Product } from "../types";
 
@@ -14,7 +15,7 @@ const itemVariants = {
   show: { opacity: 1, y: 0, scale: 1, transition: { type: "spring" as const, stiffness: 350, damping: 25 } }
 };
 
-export function ProductGrid({
+function ProductGridComponent({
   products,
   onAdd
 }: {
@@ -38,7 +39,7 @@ export function ProductGrid({
   const getProductImage = (name: string, category: string | null) => {
     return `https://ui-avatars.com/api/?name=${encodeURIComponent(
       name
-    )}&background=ccfbf1&color=0f766e&size=256&font-size=0.3`;
+    )}&background=ffe4e6&color=9f1239&size=256&font-size=0.3`;
   };
 
   return (
@@ -52,7 +53,7 @@ export function ProductGrid({
         <motion.div
           variants={itemVariants}
           key={product.id}
-          className="group flex cursor-pointer flex-col rounded-lg p-1.5 transition-colors active:bg-primary/5 md:p-2 md:hover:bg-white/70"
+          className="group flex cursor-pointer flex-col rounded-lg p-1.5 transition-colors [content-visibility:auto] active:bg-primary/5 md:p-2 md:hover:bg-white/70"
           onClick={() => onAdd(product)}
         >
           <div className="relative mb-2 aspect-square overflow-hidden rounded-lg bg-surface-container-low ring-1 ring-white/80 shadow-sm transition-transform duration-300 group-active:scale-95 md:aspect-[3/4] md:mb-3 md:shadow-[0_8px_20px_rgb(0,0,0,0.03)] md:group-hover:-translate-y-1 md:group-hover:shadow-[0_15px_35px_rgb(0,0,0,0.06)]">
@@ -78,7 +79,7 @@ export function ProductGrid({
             </h4>
             <div className="flex justify-between items-center">
               <p className="text-primary font-headline font-bold text-xs md:text-sm lg:text-base tracking-tight">
-                ₹{product.price.toFixed(0)}
+                Rs {product.price.toFixed(0)}
               </p>
               <p className="inline-flex items-center rounded-md bg-white/70 px-1.5 py-0.5 text-[9px] font-bold tracking-widest text-on-secondary-container md:rounded-lg md:px-2 md:text-[10px]">
                 {product.stock}
@@ -90,3 +91,5 @@ export function ProductGrid({
     </motion.div>
   );
 }
+
+export const ProductGrid = memo(ProductGridComponent);

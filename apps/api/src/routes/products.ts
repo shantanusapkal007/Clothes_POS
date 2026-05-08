@@ -15,6 +15,14 @@ const productSchema = z.object({
 });
 
 const productUpdateSchema = productSchema.partial();
+const tenantHeadersSchema = z.object({
+  "x-organization-id": z.string().min(1),
+  "x-store-id": z.string().min(1)
+});
+
+function getTenant(headers: unknown) {
+  return tenantHeadersSchema.parse(headers);
+}
 
 const mapProduct = (product: {
   id: string;
@@ -46,6 +54,7 @@ const mapProduct = (product: {
 
 const productRoutes: FastifyPluginAsync = async (fastify) => {
   fastify.get("/", async (request) => {
+    const tenant = getTenant(request.headers);
     const query = z
       .object({
         search: z.string().trim().optional()
@@ -54,6 +63,7 @@ const productRoutes: FastifyPluginAsync = async (fastify) => {
 
     const where = query.search
       ? {
+          storeId: tenant["x-store-id"],
           OR: [
             {
               name: {
@@ -78,7 +88,7 @@ const productRoutes: FastifyPluginAsync = async (fastify) => {
       : undefined;
 
     const products = await fastify.prisma.product.findMany({
-      where,
+      where: where ?? { storeId: tenant["x-store-id"] },
       orderBy: {
         updatedAt: "desc"
       }
@@ -88,9 +98,11 @@ const productRoutes: FastifyPluginAsync = async (fastify) => {
   });
 
   fastify.get("/barcode/:code", async (request, reply) => {
+    const tenant = getTenant(request.headers);
     const params = z.object({ code: z.string().min(1) }).parse(request.params);
-    const product = await fastify.prisma.product.findUnique({
+    const product = await fastify.prisma.product.findFirst({
       where: {
+        storeId: tenant["x-store-id"],
         barcode: params.code
       }
     });
@@ -103,9 +115,12 @@ const productRoutes: FastifyPluginAsync = async (fastify) => {
   });
 
   fastify.post("/", async (request, reply) => {
+    const tenant = getTenant(request.headers);
     const body = productSchema.parse(request.body);
     const product = await fastify.prisma.product.create({
       data: {
+        organizationId: tenant["x-organization-id"],
+        storeId: tenant["x-store-id"],
         name: body.name,
         category: body.category ?? null,
         barcode: body.barcode || null,
@@ -122,8 +137,19 @@ const productRoutes: FastifyPluginAsync = async (fastify) => {
   });
 
   fastify.put("/:id", async (request) => {
+    const tenant = getTenant(request.headers);
     const params = z.object({ id: z.string().min(1) }).parse(request.params);
     const body = productUpdateSchema.parse(request.body);
+    const existing = await fastify.prisma.product.findFirst({
+      where: {
+        id: params.id,
+        storeId: tenant["x-store-id"]
+      }
+    });
+
+    if (!existing) {
+      throw fastify.httpErrors.notFound("Product not found");
+    }
 
     const product = await fastify.prisma.product.update({
       where: { id: params.id },
@@ -145,12 +171,18 @@ const productRoutes: FastifyPluginAsync = async (fastify) => {
   });
 
   fastify.delete("/:id", async (request, reply) => {
+    const tenant = getTenant(request.headers);
     const params = z.object({ id: z.string().min(1) }).parse(request.params);
-    await fastify.prisma.product.delete({
+    const deleted = await fastify.prisma.product.deleteMany({
       where: {
-        id: params.id
+        id: params.id,
+        storeId: tenant["x-store-id"]
       }
     });
+
+    if (deleted.count === 0) {
+      return reply.code(404).send({ message: "Product not found" });
+    }
 
     return reply.code(204).send();
   });

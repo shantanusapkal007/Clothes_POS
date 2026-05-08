@@ -32,6 +32,8 @@ import {
   type BillLayoutConfig,
   type PrinterConfig
 } from "../lib/printer";
+import { notifyStoreSettingsUpdated } from "../lib/store-settings";
+import { BluetoothDeviceSelector } from "./BluetoothDeviceSelector";
 
 interface PrinterSettingsProps {
   onClose?: () => void;
@@ -60,6 +62,7 @@ export function PrinterSettings({ onClose }: PrinterSettingsProps) {
   const [btConnecting, setBtConnecting] = useState(false);
   const [serialConnecting, setSerialConnecting] = useState(false);
   const [showPreview, setShowPreview] = useState(false);
+  const [showBluetoothSelector, setShowBluetoothSelector] = useState(false);
 
   useEffect(() => {
     const storedPrinter = getPrinterConfig();
@@ -107,6 +110,7 @@ export function PrinterSettings({ onClose }: PrinterSettingsProps) {
   const persistBillLayout = (nextLayout: BillLayoutConfig) => {
     setBillLayout(nextLayout);
     saveBillLayoutConfig(nextLayout);
+    notifyStoreSettingsUpdated();
     return sameValue(getBillLayoutConfig(), nextLayout);
   };
 
@@ -180,6 +184,21 @@ export function PrinterSettings({ onClose }: PrinterSettingsProps) {
     } finally {
       setBtConnecting(false);
     }
+  };
+
+  const handleBluetoothDeviceSelected = (device: PrinterConfig) => {
+    updatePrinter({
+      ...device,
+      width: billLayout.paperWidth,
+      connected: device.connected
+    });
+    setShowBluetoothSelector(false);
+    showMessage(
+      device.connected
+        ? `${device.name} connected`
+        : `${device.name} saved. Use AirPrint if direct Bluetooth is unavailable.`,
+      device.connected ? "success" : "info"
+    );
   };
 
   const handleDisconnectSerial = async () => {
@@ -299,10 +318,14 @@ export function PrinterSettings({ onClose }: PrinterSettingsProps) {
       icon: printerConfig.connectionType === "bluetooth" && printerConfig.connected ? "bluetooth_connected" : "bluetooth",
       label: printerConfig.connectionType === "bluetooth" && printerConfig.connected ? "Disconnect" : btConnecting ? "Scanning…" : "Bluetooth",
       sublabel: "BLE",
-      available: btAvailable,
+      available: btAvailable || iosBrowser,
       active: printerConfig.connectionType === "bluetooth" && printerConfig.connected,
       activeColor: "border-blue-500 bg-blue-50",
-      onClick: printerConfig.connectionType === "bluetooth" && printerConfig.connected ? handleDisconnectBluetooth : handleRequestBluetoothPrinter,
+      onClick: printerConfig.connectionType === "bluetooth" && printerConfig.connected 
+        ? handleDisconnectBluetooth 
+        : iosBrowser
+          ? () => setShowBluetoothSelector(true)
+          : handleRequestBluetoothPrinter,
       loading: btConnecting
     },
     {
@@ -396,7 +419,7 @@ export function PrinterSettings({ onClose }: PrinterSettingsProps) {
               type="button"
             >
               <span className="material-symbols-outlined text-[16px]">receipt_long</span>
-              Layout
+              Store
             </button>
           </div>
         </div>
@@ -565,7 +588,7 @@ export function PrinterSettings({ onClose }: PrinterSettingsProps) {
               <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 md:gap-4">
                 <label className="block">
                   <span className="mb-1 block text-[9px] font-bold uppercase tracking-wider text-on-surface-variant md:text-xs">
-                    Company Name
+                    Store Name
                   </span>
                   <input
                     className="field-input"
@@ -750,12 +773,56 @@ export function PrinterSettings({ onClose }: PrinterSettingsProps) {
                 type="submit"
               >
                 <span className="material-symbols-outlined text-[18px]">save</span>
-                Save Layout
+                Save Store Settings
               </button>
             </form>
           )}
         </div>
       </motion.div>
+
+      {/* Bluetooth Device Selector Modal */}
+      {showBluetoothSelector && (
+        <>
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="mobile-drawer-backdrop"
+            onClick={() => setShowBluetoothSelector(false)}
+          />
+          <motion.div
+            initial={{ y: "100%", opacity: 0 }}
+            animate={{ y: 0, opacity: 1 }}
+            exit={{ y: "100%", opacity: 0 }}
+            transition={{ type: "spring", damping: 30, stiffness: 300 }}
+            className="mobile-drawer"
+          >
+            <div className="mobile-drawer__handle" />
+            <div className="flex items-center justify-between gap-3 border-b border-outline-variant/30 px-4 pb-3 pt-1 md:px-8 md:pb-5 md:pt-4">
+              <div>
+                <h2 className="font-serif text-xl font-bold tracking-tight text-primary md:text-2xl">
+                  Select Printer
+                </h2>
+              </div>
+              <button
+                className="material-symbols-outlined cursor-pointer rounded-lg p-2 text-secondary transition-colors hover:bg-error-container/50 hover:text-error"
+                onClick={() => setShowBluetoothSelector(false)}
+                title="Close"
+                type="button"
+              >
+                close
+              </button>
+            </div>
+            <div className="flex-1 overflow-y-auto px-4 py-4 md:px-8 md:py-6">
+              <BluetoothDeviceSelector
+                onSelectDevice={handleBluetoothDeviceSelected}
+                onClose={() => setShowBluetoothSelector(false)}
+                currentDeviceId={printerConfig.bluetoothDeviceId}
+              />
+            </div>
+          </motion.div>
+        </>
+      )}
     </>
   );
 }

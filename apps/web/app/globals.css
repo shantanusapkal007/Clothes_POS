@@ -5,21 +5,22 @@
 @layer base {
   html {
     -webkit-text-size-adjust: 100%;
-    touch-action: manipulation;
+    touch-action: pan-x pan-y;
     overscroll-behavior: none;
+    overflow-x: hidden;
   }
 
   body {
     @apply bg-background text-on-background min-h-screen selection:bg-primary-fixed antialiased;
-    background-color: #f6fbf8;
+    background-color: #fafafa;
     background-image:
-      linear-gradient(rgba(15, 118, 110, 0.05) 1px, transparent 1px),
-      linear-gradient(90deg, rgba(15, 118, 110, 0.05) 1px, transparent 1px);
+      linear-gradient(rgba(159, 18, 57, 0.045) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(15, 118, 110, 0.04) 1px, transparent 1px);
     background-size: 32px 32px;
     background-attachment: fixed;
     -webkit-tap-highlight-color: transparent;
     overscroll-behavior: none;
-    /* safe area padding for iOS */
+    overflow-x: hidden;
     padding-bottom: env(safe-area-inset-bottom, 0px);
   }
 
@@ -35,8 +36,7 @@
   select,
   textarea {
     color: #141515;
-    caret-color: #0f766e;
-    /* prevent iOS zoom on focus */
+    caret-color: #9f1239;
     font-size: 16px !important;
   }
 
@@ -79,19 +79,27 @@
     padding-bottom: calc(4rem + env(safe-area-inset-bottom, 0px));
   }
 
+  .pos-shell {
+    @apply flex min-h-[calc(100dvh-4rem)] flex-col overflow-hidden rounded-lg border border-outline-variant/35 bg-white/95 shadow-[0_20px_70px_rgba(31,26,27,0.08)] backdrop-blur-xl;
+  }
+
   @media (min-width: 768px) {
     .app-shell {
       padding-bottom: 0;
+    }
+
+    .pos-shell {
+      min-height: calc(100dvh - 7rem);
     }
   }
 
   /* ─── Ops Strip ─── */
   .ops-strip {
-    @apply mb-4 grid grid-cols-3 gap-2 md:mb-8 md:gap-4;
+    @apply grid grid-cols-3 gap-2 md:gap-3;
   }
 
   .ops-card {
-    @apply rounded-lg border border-outline-variant/40 bg-white/95 px-3 py-3 shadow-[0_8px_30px_rgb(0,0,0,0.03)] backdrop-blur-xl transition hover:bg-white hover:shadow-[0_12px_40px_rgb(0,0,0,0.06)] md:px-5 md:py-4;
+    @apply rounded-lg border border-outline-variant/40 bg-white/95 px-3 py-2.5 shadow-sm backdrop-blur-xl transition hover:bg-white md:px-4 md:py-3;
   }
 
   .ops-card strong {
@@ -138,7 +146,7 @@
 
   /* ─── Floating Cart Badge ─── */
   .floating-cart-badge {
-    @apply fixed z-50 flex items-center gap-2 rounded-full bg-primary px-5 py-3 font-bold text-on-primary shadow-[0_12px_40px_rgba(15,118,110,0.35)] transition-all active:scale-95;
+    @apply fixed z-50 flex items-center gap-2 rounded-full bg-primary px-5 py-3 font-bold text-on-primary shadow-[0_12px_40px_rgba(159,18,57,0.28)] transition-all active:scale-95;
     bottom: calc(4.5rem + env(safe-area-inset-bottom, 0px));
     right: 1rem;
     animation: pulse-badge 2s ease-in-out infinite;
@@ -173,11 +181,11 @@
 
   /* ─── Inputs ─── */
   .text-input {
-    @apply w-full rounded-lg border border-outline-variant/70 bg-white px-3 py-3 text-sm font-semibold text-on-surface shadow-[inset_0_1px_0_rgba(255,255,255,0.95),0_8px_18px_rgba(8,47,46,0.05)] transition-all placeholder:text-on-surface-variant/70 focus:border-primary focus:bg-white focus:outline-none focus:ring-4 focus:ring-primary/15 md:px-5 md:py-4 md:text-base;
+    @apply w-full rounded-lg border border-outline-variant/70 bg-white px-3 py-3 text-sm font-semibold text-on-surface shadow-[inset_0_1px_0_rgba(255,255,255,0.95),0_8px_18px_rgba(31,26,27,0.05)] transition-all placeholder:text-on-surface-variant/70 focus:border-primary focus:bg-white focus:outline-none focus:ring-4 focus:ring-primary/15 md:px-5 md:py-4 md:text-base;
   }
 
   .field-input {
-    @apply w-full rounded-lg border border-outline-variant/70 bg-white px-3 py-3 text-sm font-semibold text-on-surface shadow-[inset_0_1px_0_rgba(255,255,255,0.95),0_8px_18px_rgba(8,47,46,0.05)] transition-all placeholder:text-on-surface-variant/70 focus:border-primary focus:bg-white focus:outline-none focus:ring-4 focus:ring-primary/15 md:px-5 md:py-4 md:text-base;
+    @apply w-full rounded-lg border border-outline-variant/70 bg-white px-3 py-3 text-sm font-semibold text-on-surface shadow-[inset_0_1px_0_rgba(255,255,255,0.95),0_8px_18px_rgba(31,26,27,0.05)] transition-all placeholder:text-on-surface-variant/70 focus:border-primary focus:bg-white focus:outline-none focus:ring-4 focus:ring-primary/15 md:px-5 md:py-4 md:text-base;
   }
 
   .field-input-compact {
@@ -199,7 +207,7 @@
   }
 
   .button-primary {
-    @apply bg-primary text-on-primary shadow-[0_8px_20px_rgba(119,68,32,0.25)] hover:bg-primary-container hover:shadow-[0_12px_25px_rgba(119,68,32,0.4)];
+    @apply bg-primary text-on-primary shadow-[0_8px_20px_rgba(159,18,57,0.22)] hover:bg-primary-container hover:shadow-[0_12px_25px_rgba(159,18,57,0.32)];
   }
 
   .button-secondary {
@@ -231,7 +239,7 @@
   }
 
   .modal-backdrop {
-    @apply fixed inset-0 z-[120] flex items-end justify-center bg-[#042f2e]/40 p-0 backdrop-blur-md sm:items-center sm:p-4;
+    @apply fixed inset-0 z-[120] flex items-end justify-center bg-[#1f1a1b]/45 p-0 backdrop-blur-md sm:items-center sm:p-4;
   }
 
   .modal-card {
@@ -250,7 +258,7 @@
   .bottom-tab-bar {
     @apply fixed bottom-0 left-0 right-0 z-50 flex items-stretch border-t border-outline-variant/40 bg-white/95 backdrop-blur-xl md:hidden;
     padding-bottom: env(safe-area-inset-bottom, 0px);
-    box-shadow: 0 -4px 30px rgba(8, 47, 40, 0.08);
+    box-shadow: 0 -4px 30px rgba(31, 26, 27, 0.08);
   }
 
   .bottom-tab {
@@ -312,7 +320,7 @@
 
   /* ─── Mobile Drawer ─── */
   .mobile-drawer-backdrop {
-    @apply fixed inset-0 z-[100] bg-[#042f2e]/40 backdrop-blur-md;
+    @apply fixed inset-0 z-[100] bg-[#1f1a1b]/45 backdrop-blur-md;
     animation: fade-in 0.2s ease-out;
   }
 
