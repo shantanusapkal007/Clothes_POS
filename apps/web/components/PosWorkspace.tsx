@@ -385,7 +385,7 @@ export function PosWorkspace() {
       {/* ─── Main Content Area ─── */}
       <div className="flex flex-1 flex-col xl:flex-row xl:overflow-hidden">
         {/* ─── LEFT: Products Panel ─── */}
-        <div className={`flex flex-col ${mobileView === "cart" ? "hidden xl:flex" : "flex"} xl:flex-1 xl:overflow-hidden xl:border-r xl:border-outline-variant/20`}>
+        <div className={`flex flex-1 flex-col overflow-hidden ${mobileView === "cart" ? "hidden xl:flex" : "flex"} xl:border-r xl:border-outline-variant/20`}>
           {/* Search — compact on mobile */}
           <div className="flex-shrink-0 border-b border-outline-variant/20 bg-surface-dim p-3 sm:p-4">
             <div className="flex items-center gap-2 rounded-xl border border-outline-variant/40 bg-white px-3 py-2">
