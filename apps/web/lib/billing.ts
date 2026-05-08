@@ -26,7 +26,11 @@ export type CheckoutSummary = {
 
 const roundCurrency = (value: number) => Number(value.toFixed(2));
 
-export function calculateCheckout(items: CheckoutItemInput[]): CheckoutSummary {
+export function calculateCheckout(
+  items: CheckoutItemInput[],
+  billDiscountPercent: number = 0,
+  billManualDiscountAmount: number = 0
+): CheckoutSummary & { billDiscountAmount: number; itemDiscountAmount: number } {
   const calculatedItems = items.map((item) => {
     const lineSubtotal = roundCurrency(item.price * item.quantity);
     const percentDiscountAmount = roundCurrency(lineSubtotal * (item.discountPercent / 100));
@@ -36,10 +40,10 @@ export function calculateCheckout(items: CheckoutItemInput[]): CheckoutSummary {
         Math.max(0, lineSubtotal - percentDiscountAmount)
       )
     );
-    const discountAmount = roundCurrency(
+    const itemDiscountAmount = roundCurrency(
       Math.min(lineSubtotal, percentDiscountAmount + manualDiscountAmount)
     );
-    const taxableAmount = roundCurrency(Math.max(0, lineSubtotal - discountAmount));
+    const taxableAmount = roundCurrency(Math.max(0, lineSubtotal - itemDiscountAmount));
     const taxAmount = roundCurrency(taxableAmount * (item.taxPercent / 100));
     const total = roundCurrency(taxableAmount + taxAmount);
 
@@ -47,20 +51,27 @@ export function calculateCheckout(items: CheckoutItemInput[]): CheckoutSummary {
       ...item,
       manualDiscountAmount,
       lineSubtotal,
-      discountAmount,
+      discountAmount: itemDiscountAmount,
       taxableAmount,
       taxAmount,
       total
     };
   });
 
+  const subtotalBeforeBillDiscount = roundCurrency(calculatedItems.reduce((sum, item) => sum + item.total, 0));
+  const billPercentDiscount = roundCurrency(subtotalBeforeBillDiscount * (billDiscountPercent / 100));
+  const billManualDiscount = Math.min(billManualDiscountAmount, subtotalBeforeBillDiscount - billPercentDiscount);
+  
+  const totalBillDiscount = roundCurrency(billPercentDiscount + billManualDiscount);
+  const finalAmount = roundCurrency(Math.max(0, subtotalBeforeBillDiscount - totalBillDiscount));
+
   return {
     items: calculatedItems,
     totalAmount: roundCurrency(calculatedItems.reduce((sum, item) => sum + item.lineSubtotal, 0)),
-    discountAmount: roundCurrency(
-      calculatedItems.reduce((sum, item) => sum + item.discountAmount, 0)
-    ),
+    itemDiscountAmount: roundCurrency(calculatedItems.reduce((sum, item) => sum + item.discountAmount, 0)),
+    billDiscountAmount: totalBillDiscount,
+    discountAmount: roundCurrency(calculatedItems.reduce((sum, item) => sum + item.discountAmount, 0) + totalBillDiscount),
     taxAmount: roundCurrency(calculatedItems.reduce((sum, item) => sum + item.taxAmount, 0)),
-    finalAmount: roundCurrency(calculatedItems.reduce((sum, item) => sum + item.total, 0))
+    finalAmount
   };
 }

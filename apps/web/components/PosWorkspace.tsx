@@ -63,7 +63,14 @@ function describePrinterRoute() {
 type MobileView = "products" | "cart";
 
 export function PosWorkspace() {
-  const { addItem, items, clearCart, updateItem } = useCartStore();
+  const {
+    addItem,
+    items,
+    billDiscountPercent,
+    billManualDiscountAmount,
+    clearCart,
+    updateItem
+  } = useCartStore();
   const storeName = useStoreName();
   const [products, setProducts] = useState<Product[]>([]);
   const [search, setSearch] = useState("");
@@ -103,7 +110,10 @@ export function PosWorkspace() {
     );
   }, [products, search]);
 
-  const cartSummary = useMemo(() => calculateCart(items), [items]);
+  const cartSummary = useMemo(
+    () => calculateCart(items, billDiscountPercent, billManualDiscountAmount),
+    [items, billDiscountPercent, billManualDiscountAmount]
+  );
   const printerStatus = useMemo(() => describePrinterRoute(), [printerSettingsOpen, billPreviewOpen]);
 
   const loadProducts = async () => {
@@ -266,7 +276,12 @@ export function PosWorkspace() {
       setCheckoutPending(true);
       setError(null);
 
-      const result = await checkoutBill(items, selectedPaymentMethod);
+      const result = await checkoutBill(
+        items,
+        selectedPaymentMethod,
+        billDiscountPercent,
+        billManualDiscountAmount
+      );
       const savedBillNumber = result.id.slice(0, 8).toUpperCase();
       const billLayout = getBillLayoutConfig();
       const savedPrintableBill = printableBill

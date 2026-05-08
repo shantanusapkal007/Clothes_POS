@@ -28,12 +28,20 @@ export function CartPanel({
   onOpenPrinterSettings,
   storeWhatsAppNumber
 }: CartPanelProps) {
-  const { items, removeItem, updateItem, clearCart } = useCartStore();
+  const {
+    items,
+    billDiscountPercent,
+    billManualDiscountAmount,
+    removeItem,
+    updateItem,
+    updateBillDiscount,
+    clearCart
+  } = useCartStore();
   const [paymentMethod, setPaymentMethod] = useState<(typeof PAYMENT_METHODS)[number]["id"]>("cash");
   const [customerPhone, setCustomerPhone] = useState("");
   const [sendWhatsApp, setSendWhatsApp] = useState(false);
   const [expandedItem, setExpandedItem] = useState<string | null>(null);
-  const summary = calculateCart(items);
+  const summary = calculateCart(items, billDiscountPercent, billManualDiscountAmount);
   const lineMap = useMemo(
     () => new Map(summary.lines.map((line) => [line.productId, line])),
     [summary.lines]
@@ -387,6 +395,37 @@ export function CartPanel({
                 </p>
               ) : null}
             </label>
+            {/* Global Bill Discounts */}
+            <div className="rounded-lg border border-primary/10 bg-primary/5 p-2 sm:p-3 md:p-4 shadow-sm">
+              <span className="mb-1.5 sm:mb-2 block text-[8px] sm:text-[9px] md:text-[10px] font-bold uppercase tracking-[0.15em] text-primary">
+                Bill Discount
+              </span>
+              <div className="grid grid-cols-2 gap-2">
+                <div className="relative">
+                  <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[10px] font-bold text-primary/40">%</span>
+                  <input
+                    className="w-full rounded-lg border border-primary/20 bg-white px-3 py-2 text-xs sm:text-sm font-bold tabular-nums text-on-surface shadow-sm outline-none transition focus:border-primary focus:ring-4 focus:ring-primary/10"
+                    type="number"
+                    min={0}
+                    max={100}
+                    placeholder="Bill %"
+                    value={billDiscountPercent || ""}
+                    onChange={(e) => updateBillDiscount("billDiscountPercent", parseFloat(e.target.value) || 0)}
+                  />
+                </div>
+                <div className="relative">
+                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-[10px] font-bold text-primary/40">₹</span>
+                  <input
+                    className="w-full rounded-lg border border-primary/20 bg-white pl-6 pr-3 py-2 text-xs sm:text-sm font-bold tabular-nums text-on-surface shadow-sm outline-none transition focus:border-primary focus:ring-4 focus:ring-primary/10"
+                    type="number"
+                    min={0}
+                    placeholder="Manual ₹"
+                    value={billManualDiscountAmount || ""}
+                    onChange={(e) => updateBillDiscount("billManualDiscountAmount", parseFloat(e.target.value) || 0)}
+                  />
+                </div>
+              </div>
+            </div>
 
             {/* Order Summary */}
             <div className="rounded-lg border border-outline-variant/25 bg-white/90 p-2 sm:p-3 md:p-4 shadow-sm">

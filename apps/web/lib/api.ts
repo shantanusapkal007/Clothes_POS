@@ -71,11 +71,18 @@ export function deleteProduct(id: string) {
   });
 }
 
-export function checkoutBill(items: CartItem[], paymentMethod: string) {
+export function checkoutBill(
+  items: CartItem[],
+  paymentMethod: string,
+  billDiscountPercent: number = 0,
+  billManualDiscountAmount: number = 0
+) {
   return request<BillResponse & { summary: unknown }>("/bills", {
     method: "POST",
     body: JSON.stringify({
       paymentMethod,
+      billDiscountPercent,
+      billManualDiscountAmount,
       items: items.map((item) => ({
         productId: item.productId,
         quantity: item.quantity,

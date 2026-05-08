@@ -8,6 +8,7 @@ export interface BarcodeData {
   price?: number;
   discount?: number;
   quantity?: number;
+  manualDiscount?: number;
   rawData: string;
 }
 function parseLooseNumber(value: string): number | undefined {
@@ -28,6 +29,7 @@ function parseLooseNumber(value: string): number | undefined {
  * - With price: "123456789|25.99" or "123456789:25.99"
  * - With price and discount: "123456789|25.99|10" or "123456789:25.99:10"
  * - With quantity: "123456789|25.99|10|2" (barcode|price|discount%|quantity)
+ * - With manual discount: "123456789|25.99|10|2|5.00"
  */
 export function parseBarcodeData(scannedText: string): BarcodeData {
   const trimmed = scannedText.trim();
@@ -97,6 +99,14 @@ function parsePipeFormat(data: string): BarcodeData {
     }
   }
 
+  // Parse manual discount (fifth part)
+  if (parts[4]) {
+    const manualNum = parseLooseNumber(parts[4]);
+    if (manualNum !== undefined) {
+      result.manualDiscount = Math.abs(manualNum);
+    }
+  }
+
   return result;
 }
 
@@ -130,6 +140,13 @@ function parseColonFormat(data: string): BarcodeData {
     }
   }
 
+  if (parts[4]) {
+    const manualNum = parseLooseNumber(parts[4]);
+    if (manualNum !== undefined) {
+      result.manualDiscount = Math.abs(manualNum);
+    }
+  }
+
   return result;
 }
 
@@ -140,20 +157,23 @@ export function formatBarcodeString(
   barcode: string,
   price?: number,
   discount?: number,
-  quantity?: number
+  quantity?: number,
+  manualDiscount?: number
 ): string {
   let result = barcode;
 
   if (price !== undefined) {
     result += `|${price.toFixed(2)}`;
-    if (discount !== undefined || quantity !== undefined) {
+    if (discount !== undefined || quantity !== undefined || manualDiscount !== undefined) {
       result += `|${discount ?? 0}`;
-      if (quantity !== undefined) {
-        result += `|${quantity}`;
+      if (quantity !== undefined || manualDiscount !== undefined) {
+        result += `|${quantity ?? 1}`;
+        if (manualDiscount !== undefined) {
+          result += `|${manualDiscount.toFixed(2)}`;
+        }
       }
     }
   }
 
   return result;
 }
-

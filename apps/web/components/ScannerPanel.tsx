@@ -44,6 +44,7 @@ export function ScannerPanel({
   const [pricePromptValues, setPricePromptValues] = useState({
     price: "",
     discount: "",
+    manualDiscount: "",
     qty: "1"
   });
 
@@ -73,6 +74,7 @@ export function ScannerPanel({
     setPricePromptValues({
       price: "",
       discount: defaults?.discount !== undefined ? String(defaults.discount) : "",
+      manualDiscount: "",
       qty: String(defaults?.quantity ?? 1)
     });
     setPricePromptError(null);
@@ -131,10 +133,13 @@ export function ScannerPanel({
         ? Math.max(0, Math.min(100, discountValue))
         : undefined;
 
+    const manualDiscountRaw = pricePromptValues.manualDiscount.trim();
+    const manualDiscount = manualDiscountRaw ? Number(manualDiscountRaw) : undefined;
+
     const qtyRaw = parseInt(pricePromptValues.qty, 10);
     const quantity = Number.isFinite(qtyRaw) && qtyRaw > 0 ? qtyRaw : undefined;
 
-    const structured = formatBarcodeString(pricePromptBarcode, price, discount, quantity);
+    const structured = formatBarcodeString(pricePromptBarcode, price, discount, quantity, manualDiscount);
     setBarcodeInput(structured);
     setPricePromptOpen(false);
     setPricePromptBarcode(null);
@@ -452,6 +457,17 @@ export function ScannerPanel({
                   value={pricePromptValues.discount}
                   onChange={(event) =>
                     setPricePromptValues((current) => ({ ...current, discount: event.target.value }))
+                  }
+                />
+                <input
+                  className="text-input text-xs sm:text-sm py-2 sm:py-3"
+                  type="number"
+                  step="0.01"
+                  min={0}
+                  placeholder="Manual Disc ₹"
+                  value={pricePromptValues.manualDiscount}
+                  onChange={(event) =>
+                    setPricePromptValues((current) => ({ ...current, manualDiscount: event.target.value }))
                   }
                 />
                 <input

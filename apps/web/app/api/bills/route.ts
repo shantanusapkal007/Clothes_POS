@@ -12,6 +12,8 @@ export const runtime = "nodejs";
 
 const checkoutSchema = z.object({
   paymentMethod: z.string().min(1),
+  billDiscountPercent: z.coerce.number().min(0).max(100).optional().default(0),
+  billManualDiscountAmount: z.coerce.number().min(0).optional().default(0),
   items: z
     .array(
       z.object({
@@ -115,7 +117,11 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    const summary = calculateCheckout(body.items);
+    const summary = calculateCheckout(
+      body.items,
+      body.billDiscountPercent,
+      body.billManualDiscountAmount
+    );
 
     const bill = await prisma.$transaction(async (tx) => {
       const createdBill = await tx.bill.create({
@@ -127,6 +133,8 @@ export async function POST(request: NextRequest) {
           discountAmount: new Decimal(summary.discountAmount),
           taxAmount: new Decimal(summary.taxAmount),
           finalAmount: new Decimal(summary.finalAmount),
+          billDiscountPercent: new Decimal(body.billDiscountPercent),
+          billManualDiscountAmount: new Decimal(body.billManualDiscountAmount),
           paymentMethod: body.paymentMethod
         }
       });

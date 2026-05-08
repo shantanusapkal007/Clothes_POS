@@ -90,6 +90,8 @@ model Bill {
   discountAmount Decimal      @map("discount_amount") @db.Decimal(10, 2)
   taxAmount      Decimal      @map("tax_amount") @db.Decimal(10, 2)
   finalAmount    Decimal      @map("final_amount") @db.Decimal(10, 2)
+  billDiscountPercent Decimal  @default(0) @map("bill_discount_percent") @db.Decimal(5, 2)
+  billManualDiscountAmount Decimal @default(0) @map("bill_manual_discount_amount") @db.Decimal(10, 2)
   paymentMethod  String       @map("payment_method")
   status         String       @default("completed")
   customerName   String?      @map("customer_name")

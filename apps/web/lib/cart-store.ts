@@ -5,10 +5,16 @@ import type { CartItem, Product } from "../types";
 
 type CartState = {
   items: CartItem[];
+  billDiscountPercent: number;
+  billManualDiscountAmount: number;
   addItem: (product: Product) => void;
   updateItem: (
     productId: string,
     field: "quantity" | "price" | "discountPercent" | "manualDiscountAmount" | "taxPercent",
+    value: number
+  ) => void;
+  updateBillDiscount: (
+    field: "billDiscountPercent" | "billManualDiscountAmount",
     value: number
   ) => void;
   removeItem: (productId: string) => void;
@@ -17,6 +23,8 @@ type CartState = {
 
 export const useCartStore = create<CartState>((set) => ({
   items: [],
+  billDiscountPercent: 0,
+  billManualDiscountAmount: 0,
   addItem: (product) =>
     set((state) => {
       const existing = state.items.find((item) => item.productId === product.id);
@@ -74,9 +82,13 @@ export const useCartStore = create<CartState>((set) => ({
           : item
       )
     })),
+  updateBillDiscount: (field, value) =>
+    set(() => ({
+      [field]: Math.max(0, Number.isFinite(value) ? value : 0)
+    })),
   removeItem: (productId) =>
     set((state) => ({
       items: state.items.filter((item) => item.productId !== productId)
     })),
-  clearCart: () => set({ items: [] })
+  clearCart: () => set({ items: [], billDiscountPercent: 0, billManualDiscountAmount: 0 })
 }));
