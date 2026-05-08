@@ -50,10 +50,10 @@ function ProductGridComponent({
 }) {
   if (products.length === 0) {
     return (
-      <div className="flex flex-col items-center justify-center py-16 text-center">
-        <span className="material-symbols-outlined mb-3 text-5xl text-on-surface-variant/30">search_off</span>
-        <h3 className="text-base font-bold text-on-surface">No products found</h3>
-        <p className="mt-1 text-xs text-on-secondary-container">Try adjusting your search or add new stock.</p>
+      <div className="flex flex-col items-center justify-center py-8 sm:py-12 md:py-16 text-center">
+        <span className="material-symbols-outlined mb-2 sm:mb-3 text-4xl sm:text-5xl text-on-surface-variant/30">search_off</span>
+        <h3 className="text-sm sm:text-base md:text-lg font-bold text-on-surface">No products found</h3>
+        <p className="mt-0.5 sm:mt-1 text-[10px] sm:text-xs md:text-sm text-on-secondary-container">Try adjusting your search or add new stock.</p>
       </div>
     );
   }
@@ -63,7 +63,7 @@ function ProductGridComponent({
       variants={containerVariants}
       initial="hidden"
       animate="show"
-      className="grid grid-cols-3 gap-2 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6"
+      className="grid grid-cols-4 gap-1 xs:grid-cols-4 xs:gap-1.5 sm:grid-cols-4 sm:gap-2 md:grid-cols-5 md:gap-3 lg:grid-cols-6 lg:gap-3"
     >
       {products.map((product) => {
         const lowStock = product.stock <= (product.minStock ?? 2);
@@ -74,41 +74,42 @@ function ProductGridComponent({
             key={product.id}
             type="button"
             onClick={() => onAdd(product)}
-            className="group relative flex flex-col items-center rounded-xl border border-outline-variant/25 bg-white p-2 text-center shadow-sm transition-all active:scale-[0.95] active:shadow-md md:p-3 md:hover:shadow-md md:hover:-translate-y-0.5"
+            className="group relative flex flex-col items-center rounded-lg sm:rounded-xl border border-outline-variant/25 bg-white p-1.5 sm:p-2 md:p-3 text-center shadow-sm transition-all active:scale-[0.95] active:shadow-md md:hover:shadow-md md:hover:-translate-y-0.5 touch-action-manipulation"
+            style={{ minHeight: '100px' }}
           >
             {/* Low stock indicator */}
             {lowStock && (
-              <span className="absolute -right-1 -top-1 flex h-3.5 w-3.5 items-center justify-center rounded-full bg-red-500 text-[7px] font-bold text-white ring-2 ring-white">
+              <span className="absolute -right-0.5 -top-0.5 flex h-3 w-3 sm:h-3.5 sm:w-3.5 items-center justify-center rounded-full bg-red-500 text-[6px] sm:text-[7px] font-bold text-white ring-2 ring-white">
                 !
               </span>
             )}
 
             {/* Avatar circle */}
-            <div className={`flex h-11 w-11 items-center justify-center rounded-full ${color.bg} mb-1.5 md:h-14 md:w-14`}>
-              <span className={`text-sm font-bold ${color.text} md:text-base`}>
+            <div className={`flex h-9 w-9 sm:h-11 sm:w-11 md:h-14 md:w-14 items-center justify-center rounded-full ${color.bg} mb-1 sm:mb-1.5 md:mb-2`}>
+              <span className={`text-xs sm:text-sm md:text-base font-bold ${color.text}`}>
                 {getInitials(product.name)}
               </span>
             </div>
 
             {/* Product name */}
-            <p className="line-clamp-2 w-full text-[11px] font-semibold leading-tight text-on-surface md:text-xs">
+            <p className="line-clamp-2 w-full text-[9px] sm:text-[10px] md:text-xs font-semibold leading-tight text-on-surface">
               {product.name}
             </p>
 
             {/* Category */}
             {product.category && (
-              <p className="mt-0.5 truncate w-full text-[8px] uppercase tracking-wider text-on-secondary-container/50 md:text-[9px]">
+              <p className="mt-0.5 truncate w-full text-[7px] sm:text-[8px] md:text-[9px] uppercase tracking-wider text-on-secondary-container/50">
                 {product.category}
               </p>
             )}
 
             {/* Price */}
-            <p className="mt-auto pt-1 text-sm font-bold tabular-nums text-primary md:text-base">
+            <p className="mt-auto pt-1 text-xs sm:text-sm md:text-base font-bold tabular-nums text-primary">
               ₹{product.price.toFixed(0)}
             </p>
 
             {/* Stock count */}
-            <p className={`text-[8px] font-bold tabular-nums uppercase ${lowStock ? "text-red-600" : "text-on-secondary-container/40"}`}>
+            <p className={`text-[6px] sm:text-[8px] md:text-[9px] font-bold tabular-nums uppercase ${lowStock ? "text-red-600" : "text-on-secondary-container/40"}`}>
               {product.stock} in stock
             </p>
           </motion.button>

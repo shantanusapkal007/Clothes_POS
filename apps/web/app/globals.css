@@ -79,8 +79,8 @@
   .app-shell {
     @apply min-h-screen;
     /* Mobile: top bar (56px) + bottom tab bar + safe area */
-    padding-top: 3.5rem;
-    padding-bottom: calc(4rem + env(safe-area-inset-bottom, 0px));
+    padding-top: 3rem;
+    padding-bottom: calc(3.5rem + env(safe-area-inset-bottom, 0px));
   }
 
   /* Desktop main content — offset driven by collapsible sidebar CSS var */
@@ -90,7 +90,13 @@
   }
 
   .pos-shell {
-    @apply flex h-[calc(100dvh-8rem)] flex-col rounded-lg border border-outline-variant/35 bg-white/95 shadow-[0_20px_70px_rgba(31,26,27,0.08)] backdrop-blur-xl;
+    @apply flex h-[calc(100dvh-6.5rem)] flex-col rounded-lg border border-outline-variant/35 bg-white/95 shadow-[0_20px_70px_rgba(31,26,27,0.08)] backdrop-blur-xl;
+  }
+
+  @media (min-width: 640px) {
+    .pos-shell {
+      @apply h-[calc(100dvh-7rem)];
+    }
   }
 
   @media (min-width: 768px) {
@@ -148,7 +154,8 @@
   }
 
   .mobile-tab {
-    @apply flex-1 flex items-center justify-center gap-2 rounded-lg py-2.5 text-xs font-bold uppercase tracking-[0.15em] transition-all duration-200;
+    @apply flex-1 flex items-center justify-center gap-2 rounded-lg py-3 px-2 text-xs font-bold uppercase tracking-[0.15em] transition-all duration-200 md:py-2.5;
+    min-height: 48px;
   }
 
   .mobile-tab--active {
@@ -159,12 +166,19 @@
     @apply text-on-secondary-container hover:bg-surface-container-highest;
   }
 
+  .mobile-tab .material-symbols-outlined {
+    font-size: 20px;
+  }
+
   /* ─── Floating Cart Badge ─── */
   .floating-cart-badge {
-    @apply fixed z-50 flex items-center gap-2 rounded-full bg-primary px-5 py-3 font-bold text-on-primary shadow-[0_12px_40px_rgba(159,18,57,0.28)] transition-all active:scale-95;
-    bottom: calc(4.5rem + env(safe-area-inset-bottom, 0px));
+    @apply fixed z-50 flex items-center gap-2 rounded-full bg-primary px-4 py-3 font-bold text-on-primary shadow-[0_12px_40px_rgba(159,18,57,0.28)] transition-all active:scale-95;
+    bottom: calc(3.75rem + env(safe-area-inset-bottom, 0px));
     right: 1rem;
+    left: auto;
     animation: pulse-badge 2s ease-in-out infinite;
+    min-height: 48px;
+    min-width: 48px;
   }
 
   .floating-cart-badge:active {
@@ -214,11 +228,14 @@
   /* ─── Buttons ─── */
   .button {
     @apply inline-flex items-center justify-center rounded-lg px-4 py-3 text-sm font-semibold tracking-wide transition-all active:scale-[0.96] disabled:cursor-not-allowed disabled:opacity-60;
-    min-height: 44px; /* minimum touch target */
+    min-height: 48px;
+    min-width: 48px;
+    touch-action: manipulation;
   }
 
   .button-small {
     @apply min-h-11 px-3 py-2 text-xs uppercase tracking-[0.15em] md:px-4 md:py-2.5 md:text-sm md:tracking-[0.15em];
+    min-height: 44px;
   }
 
   .button-primary {

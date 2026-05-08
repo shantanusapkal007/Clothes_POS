@@ -326,15 +326,15 @@ export function PosWorkspace() {
   return (
     <section className="pos-shell">
       {/* ─── Compact Header ─── */}
-      <header className="z-30 flex items-center gap-2 border-b border-outline-variant/25 bg-white/90 px-3 py-2 backdrop-blur-sm sm:px-4 sm:py-3">
+      <header className="z-30 flex items-center gap-2 border-b border-outline-variant/25 bg-white/90 px-2.5 py-2 backdrop-blur-sm sm:px-4 sm:py-3 md:px-4">
         <div className="min-w-0 flex-1">
-          <h2 className="truncate text-base font-bold text-on-background sm:text-xl">
+          <h2 className="truncate text-sm font-bold text-on-background sm:text-base md:text-xl">
             {storeName}
           </h2>
         </div>
 
         {/* Desktop-only stats */}
-        <div className="hidden items-center gap-3 md:flex">
+        <div className="hidden items-center gap-2 md:gap-3 md:flex">
           <span className="rounded-lg bg-surface-container-high px-2.5 py-1 text-xs font-bold tabular-nums text-on-secondary-container">
             {products.length} products
           </span>
@@ -346,33 +346,33 @@ export function PosWorkspace() {
         </div>
 
         <button
-          className="flex h-9 w-9 items-center justify-center rounded-lg border border-outline-variant/30 bg-white text-on-secondary-container transition active:scale-95"
+          className="flex h-10 w-10 items-center justify-center rounded-lg border border-outline-variant/30 bg-white text-on-secondary-container transition active:scale-95 touch-action-manipulation"
           onClick={() => setPrinterSettingsOpen(true)}
           title="Settings"
           type="button"
         >
-          <span className="material-symbols-outlined" style={{ fontSize: 18 }}>settings</span>
+          <span className="material-symbols-outlined" style={{ fontSize: 20 }}>settings</span>
         </button>
       </header>
 
       {/* ─── Mobile Tab Switcher ─── */}
-      <div className="block xl:hidden border-b border-outline-variant/20 bg-surface-dim px-3 py-2">
+      <div className="block xl:hidden border-b border-outline-variant/20 bg-surface-dim px-2 py-1.5 sm:px-3 sm:py-2">
         <div className="mobile-tab-bar">
           <button
             type="button"
             className={`mobile-tab ${mobileView === "products" ? "mobile-tab--active" : "mobile-tab--inactive"}`}
             onClick={() => setMobileView("products")}
           >
-            <span className="material-symbols-outlined text-[18px]">storefront</span>
-            Products
+            <span className="material-symbols-outlined text-[20px]">storefront</span>
+            <span className="hidden xs:inline">Products</span>
           </button>
           <button
             type="button"
             className={`mobile-tab ${mobileView === "cart" ? "mobile-tab--active" : "mobile-tab--inactive"}`}
             onClick={() => setMobileView("cart")}
           >
-            <span className="material-symbols-outlined text-[18px]">shopping_cart</span>
-            Cart
+            <span className="material-symbols-outlined text-[20px]">shopping_cart</span>
+            <span className="hidden xs:inline">Cart</span>
             {items.length > 0 && (
               <span className="ml-1 flex h-5 w-5 items-center justify-center rounded-full bg-white/20 text-[10px] font-bold">
                 {items.length}
@@ -387,12 +387,12 @@ export function PosWorkspace() {
         {/* ─── LEFT: Products Panel ─── */}
         <div className={`flex flex-1 flex-col overflow-hidden ${mobileView === "cart" ? "hidden xl:flex" : "flex"} xl:border-r xl:border-outline-variant/20`}>
           {/* Search — compact on mobile */}
-          <div className="flex-shrink-0 border-b border-outline-variant/20 bg-surface-dim p-3 sm:p-4">
-            <div className="flex items-center gap-2 rounded-xl border border-outline-variant/40 bg-white px-3 py-2">
-              <span className="material-symbols-outlined text-on-secondary-container/40" style={{ fontSize: 18 }}>search</span>
+          <div className="flex-shrink-0 border-b border-outline-variant/20 bg-surface-dim p-2 sm:p-3 md:p-4">
+            <div className="flex items-center gap-2 rounded-lg border border-outline-variant/40 bg-white px-3 py-2.5 sm:rounded-xl sm:px-3 sm:py-2.5">
+              <span className="material-symbols-outlined text-on-secondary-container/40 text-lg sm:text-xl" style={{ fontSize: 18 }}>search</span>
               <input
-                className="flex-1 border-none bg-transparent text-sm text-on-surface placeholder:text-on-secondary-container/50 focus:outline-none focus:ring-0"
-                placeholder="Search products..."
+                className="flex-1 border-none bg-transparent text-xs sm:text-sm text-on-surface placeholder:text-on-secondary-container/50 focus:outline-none focus:ring-0"
+                placeholder="Search..."
                 value={search}
                 onChange={(event) => setSearch(event.target.value)}
                 style={{ fontSize: 16 }}
@@ -400,17 +400,18 @@ export function PosWorkspace() {
               {search && (
                 <button
                   onClick={() => setSearch("")}
-                  className="material-symbols-outlined text-on-secondary-container/40"
+                  className="material-symbols-outlined text-on-secondary-container/40 text-lg"
                   style={{ fontSize: 16 }}
+                  type="button"
                 >
                   close
                 </button>
               )}
             </div>
           </div>
-          <div className="flex-1 overflow-y-auto p-3 sm:p-4" style={{ WebkitOverflowScrolling: "touch" }}>
+          <div className="flex-1 overflow-y-auto p-2 sm:p-3 md:p-4" style={{ WebkitOverflowScrolling: "touch" }}>
             {loading ? (
-              <div className="grid grid-cols-3 gap-2 sm:grid-cols-4 md:grid-cols-5">
+              <div className="grid grid-cols-3 gap-1.5 sm:grid-cols-4 md:grid-cols-5 gap-2 md:gap-3">
                 {Array.from({ length: 12 }).map((_, i) => (
                   <ProductSkeleton key={i} />
                 ))}
@@ -418,12 +419,12 @@ export function PosWorkspace() {
             ) : visibleProducts.length > 0 ? (
               <ProductGrid products={visibleProducts} onAdd={handleProductAdd} />
             ) : (
-              <div className="flex flex-col items-center justify-center py-12 text-center">
-                <span className="material-symbols-outlined text-4xl text-on-surface-variant/30 mb-3">
+              <div className="flex flex-col items-center justify-center py-8 text-center sm:py-12">
+                <span className="material-symbols-outlined text-3xl sm:text-4xl text-on-surface-variant/30 mb-2 sm:mb-3">
                   inventory_2
                 </span>
-                <p className="font-semibold text-on-surface">No products found</p>
-                <p className="mt-1 text-sm text-on-secondary-container">
+                <p className="font-semibold text-xs sm:text-sm text-on-surface">No products found</p>
+                <p className="mt-0.5 sm:mt-1 text-xs text-on-secondary-container">
                   {search ? "Try adjusting your search" : "Add products to get started"}
                 </p>
               </div>
@@ -431,7 +432,7 @@ export function PosWorkspace() {
           </div>
 
           {/* Scanner at the bottom */}
-          <div className="flex-shrink-0 border-t border-outline-variant/20 bg-surface-dim p-3 sm:p-4">
+          <div className="flex-shrink-0 border-t border-outline-variant/20 bg-surface-dim p-2 sm:p-3 md:p-4">
             <ScannerPanel
               barcodeInput={barcodeInput}
               setBarcodeInput={setBarcodeInput}
@@ -443,8 +444,8 @@ export function PosWorkspace() {
         {/* ─── RIGHT: Cart & Checkout Panel ─── */}
         <div className={`flex flex-col overflow-hidden ${mobileView === "products" ? "hidden xl:flex" : "flex"} xl:flex-1 xl:max-w-lg`}>
           {/* Cart Toolbar */}
-          <div className="flex-shrink-0 border-b border-outline-variant/20 bg-surface-dim px-4 py-3 flex items-center justify-between sm:px-6">
-            <h3 className="font-bold text-on-surface">Shopping Cart</h3>
+          <div className="flex-shrink-0 border-b border-outline-variant/20 bg-surface-dim px-2 py-2 sm:px-4 sm:py-3 flex items-center justify-between md:px-6">
+            <h3 className="font-bold text-xs sm:text-sm text-on-surface md:text-base">Shopping Cart</h3>
             <button
               className="button button-secondary button-small"
               onClick={() => setPrinterSettingsOpen(true)}
@@ -467,13 +468,13 @@ export function PosWorkspace() {
 
           {/* Cart Footer */}
           {items.length > 0 && (
-            <div className="border-t border-outline-variant/20 bg-surface-dim p-4 space-y-3 sm:p-6">
+            <div className="border-t border-outline-variant/20 bg-surface-dim p-2 sm:p-4 md:p-6 space-y-2 sm:space-y-3">
               <button
                 className="button button-primary w-full"
                 onClick={() => void loadProducts()}
               >
                 <span className="material-symbols-outlined">refresh</span>
-                Reload Products
+                <span className="hidden sm:inline">Reload Products</span>
               </button>
             </div>
           )}
@@ -488,7 +489,7 @@ export function PosWorkspace() {
           onClick={() => setMobileView("cart")}
         >
           <span className="material-symbols-outlined text-xl">shopping_cart</span>
-          <span>{items.length} — ₹{cartSummary.finalAmount.toFixed(0)}</span>
+          <span className="hidden xs:inline">{items.length} — ₹{cartSummary.finalAmount.toFixed(0)}</span>
         </button>
       )}
 
@@ -499,7 +500,7 @@ export function PosWorkspace() {
             initial={{ opacity: 0, y: -20 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -20 }}
-            className="fixed bottom-20 left-1/2 -translate-x-1/2 z-50 rounded-lg bg-green-50 px-4 py-3 text-sm font-medium text-green-800 border border-green-200 shadow-lg"
+            className="fixed bottom-20 left-1/2 -translate-x-1/2 z-50 rounded-lg bg-green-50 px-4 py-3 text-xs sm:text-sm font-medium text-green-800 border border-green-200 shadow-lg max-w-xs"
           >
             {message}
           </motion.div>
@@ -511,9 +512,9 @@ export function PosWorkspace() {
           initial={{ opacity: 0, y: -20 }}
           animate={{ opacity: 1, y: 0 }}
           exit={{ opacity: 0, y: -20 }}
-          className="fixed bottom-20 left-1/2 -translate-x-1/2 z-50 rounded-lg bg-red-50 border border-red-200 p-4 shadow-lg max-w-sm"
+          className="fixed bottom-20 left-1/2 -translate-x-1/2 z-50 rounded-lg bg-red-50 border border-red-200 p-3 sm:p-4 shadow-lg max-w-xs"
         >
-          <p className="text-sm font-medium text-red-800 mb-3">{error}</p>
+          <p className="text-xs sm:text-sm font-medium text-red-800 mb-2 sm:mb-3">{error}</p>
           <button
             className="button button-secondary button-small w-full"
             type="button"

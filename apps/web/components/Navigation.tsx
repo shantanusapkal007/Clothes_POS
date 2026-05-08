@@ -154,19 +154,19 @@ export function Navigation() {
       {/* ───────────────────────────────────────────
           MOBILE: Fixed Top Bar
       ─────────────────────────────────────────── */}
-      <header className="fixed left-0 right-0 top-0 z-50 flex h-14 items-center justify-between border-b border-outline-variant/40 bg-white/95 px-4 backdrop-blur-xl md:hidden"
+      <header className="fixed left-0 right-0 top-0 z-50 flex h-12 sm:h-14 items-center justify-between border-b border-outline-variant/40 bg-white/95 px-2.5 sm:px-4 backdrop-blur-xl md:hidden"
         style={{ boxShadow: "0 1px 12px rgba(0,0,0,0.06)" }}
       >
-        <span className="truncate text-base font-bold text-primary">
+        <span className="truncate text-sm sm:text-base font-bold text-primary">
           {storeName || "Clothing POS"}
         </span>
         <button
           onClick={handleSignOut}
           disabled={signingOut}
           aria-label="Sign out"
-          className="flex h-9 w-9 items-center justify-center rounded-lg text-on-secondary-container transition-colors hover:bg-surface-container-high active:opacity-70 disabled:opacity-50"
+          className="flex h-10 w-10 items-center justify-center rounded-lg text-on-secondary-container transition-colors hover:bg-surface-container-high active:opacity-70 disabled:opacity-50 touch-action-manipulation"
         >
-          <span className="material-symbols-outlined" style={{ fontSize: 20 }}>
+          <span className="material-symbols-outlined text-lg sm:text-xl" style={{ fontSize: 20 }}>
             logout
           </span>
         </button>
@@ -189,8 +189,8 @@ export function Navigation() {
                 isActive ? "bottom-tab--active" : "bottom-tab--inactive"
               }`}
             >
-              <span className="material-symbols-outlined">{item.icon}</span>
-              <span>{item.name}</span>
+              <span className="material-symbols-outlined text-lg sm:text-xl">{item.icon}</span>
+              <span className="text-[10px] sm:text-[11px]">{item.name}</span>
             </Link>
           );
         })}

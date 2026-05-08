@@ -285,19 +285,19 @@ export function ScannerPanel({
 
   return (
     <>
-      <div className="glass-panel rounded-lg p-4 shadow-sm md:p-6">
+      <div className="glass-panel rounded-lg p-2 sm:p-4 md:p-6 shadow-sm">
         <form
           onSubmit={handleSubmit}
-          className="flex flex-col gap-3 sm:flex-row sm:items-center sm:gap-4"
+          className="flex flex-col gap-2 sm:gap-3 md:gap-4"
         >
           <div className="relative flex-1" onClick={focusInput}>
-            <span className="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-outline text-sm md:text-base">
+            <span className="material-symbols-outlined absolute left-3 sm:left-4 top-1/2 -translate-y-1/2 text-outline text-sm md:text-base">
               barcode_scanner
             </span>
             <input
               ref={inputRef}
-              className="field-input pl-10 md:pl-12"
-              placeholder="Scan or enter SKU number..."
+              className="field-input pl-8 sm:pl-10 md:pl-12 text-xs sm:text-sm md:text-base py-2 sm:py-3 md:py-4"
+              placeholder="Scan or enter SKU..."
               type="text"
               value={barcodeInput}
               onChange={(event) => setBarcodeInput(event.target.value)}
@@ -309,45 +309,51 @@ export function ScannerPanel({
             />
           </div>
 
-          <button
-            type="button"
-            onClick={focusInput}
-            className="flex h-12 items-center justify-center rounded-lg border border-outline-variant/40 bg-surface-container-lowest px-4 text-on-surface transition-all hover:bg-surface-container-high sm:h-14"
-            title="Focus scanner input"
-          >
-            Ready
-          </button>
+          <div className="flex gap-1 sm:gap-2 md:gap-3">
+            <button
+              type="button"
+              onClick={focusInput}
+              className="flex items-center justify-center rounded-lg border border-outline-variant/40 bg-surface-container-lowest px-2 sm:px-3 md:px-4 py-2.5 sm:py-3 md:py-3 text-on-surface transition-all hover:bg-surface-container-high text-xs sm:text-sm md:text-base font-semibold touch-action-manipulation"
+              title="Focus scanner input"
+            >
+              <span className="hidden sm:inline">Ready</span>
+              <span className="sm:hidden">🎯</span>
+            </button>
 
-          <button
-            type="button"
-            onClick={() => setCameraOpen(true)}
-            disabled={!cameraSupported}
-            className="flex h-12 w-full items-center justify-center rounded-lg bg-primary text-on-primary shadow-lg transition-all hover:bg-primary-container disabled:cursor-not-allowed disabled:opacity-60 active:scale-95 sm:h-14 sm:w-14 shrink-0"
-            title={
-              cameraSupported
-                ? "Open Camera Scanner"
-                : "Camera scanning requires HTTPS and camera permission"
-            }
-          >
-            <span className="material-symbols-outlined" data-weight="fill">
-              photo_camera
-            </span>
-          </button>
+            <button
+              type="button"
+              onClick={() => setCameraOpen(true)}
+              disabled={!cameraSupported}
+              className="flex items-center justify-center rounded-lg bg-primary text-on-primary shadow-lg transition-all hover:bg-primary-container disabled:cursor-not-allowed disabled:opacity-60 active:scale-95 px-3 sm:px-4 md:px-5 py-2.5 sm:py-3 md:py-3 font-semibold text-xs sm:text-sm md:text-base touch-action-manipulation"
+              title={
+                cameraSupported
+                  ? "Open Camera Scanner"
+                  : "Camera scanning requires HTTPS and camera permission"
+              }
+            >
+              <span className="material-symbols-outlined text-lg sm:text-xl md:text-2xl" data-weight="fill">
+                photo_camera
+              </span>
+              <span className="hidden sm:inline ml-1">Camera</span>
+            </button>
 
-          <button
-            type="submit"
-            className="flex h-12 items-center justify-center rounded-lg bg-primary-fixed px-5 font-semibold text-on-primary-fixed transition-all hover:bg-primary-fixed-dim sm:h-14"
-          >
-            Add
-          </button>
+            <button
+              type="submit"
+              className="flex items-center justify-center rounded-lg bg-primary-fixed px-4 sm:px-5 md:px-6 py-2.5 sm:py-3 md:py-3 font-semibold text-on-primary-fixed transition-all hover:bg-primary-fixed-dim active:scale-95 text-xs sm:text-sm md:text-base touch-action-manipulation"
+            >
+              <span className="material-symbols-outlined text-lg sm:text-xl md:text-2xl">add_circle</span>
+              <span className="hidden sm:inline ml-1">Add</span>
+            </button>
+          </div>
         </form>
 
-        <div className="mt-3 flex flex-col gap-2 text-xs text-on-secondary-container md:text-sm">
+        <div className="mt-2 sm:mt-3 md:mt-4 flex flex-col gap-1.5 sm:gap-2 text-[9px] sm:text-xs md:text-sm text-on-secondary-container">
           <p>Keyboard-style barcode scanners can type here and submit with Enter or Tab.</p>
 
-          <label className="flex items-center gap-2">
+          <label className="flex items-start gap-2">
             <input
               type="checkbox"
+              className="mt-0.5 sm:mt-1"
               checked={promptForPrice}
               onChange={(event) => {
                 const next = event.target.checked;
@@ -372,10 +378,10 @@ export function ScannerPanel({
             <div className="panel-heading">
               <div>
                 <p className="eyebrow">Camera scanner</p>
-                <h2>Scan barcode with camera</h2>
+                <h2 className="text-base sm:text-lg md:text-2xl">Scan barcode with camera</h2>
               </div>
               <button
-                className="button button-ghost self-start sm:self-auto"
+                className="button button-ghost self-start sm:self-auto text-xs sm:text-sm"
                 type="button"
                 onClick={() => setCameraOpen(false)}
               >
@@ -383,21 +389,21 @@ export function ScannerPanel({
               </button>
             </div>
 
-            <div className="space-y-4">
-              <div className="rounded-lg border border-outline-variant/20 bg-surface-container-low p-3">
+            <div className="space-y-3 sm:space-y-4">
+              <div className="rounded-lg border border-outline-variant/20 bg-surface-container-low p-2 sm:p-3">
                 <div
                   id={scannerRegionId}
-                  className="min-h-[280px] overflow-hidden rounded-lg bg-black/10"
+                  className="min-h-[200px] sm:min-h-[280px] overflow-hidden rounded-lg bg-black/10"
                 />
               </div>
 
               {cameraPending ? (
-                <p className="text-sm text-on-secondary-container">Starting camera scanner...</p>
+                <p className="text-xs sm:text-sm text-on-secondary-container">Starting camera scanner...</p>
               ) : null}
 
-              {cameraError ? <p className="error-text">{cameraError}</p> : null}
+              {cameraError ? <p className="error-text text-xs sm:text-sm">{cameraError}</p> : null}
 
-              <p className="text-sm text-on-secondary-container">
+              <p className="text-xs sm:text-sm text-on-secondary-container">
                 For price-on-sticker workflows, QR codes scan best. Embedded formats like{" "}
                 <code>barcode|price|discount|qty</code> are supported.
               </p>
@@ -412,10 +418,10 @@ export function ScannerPanel({
             <div className="panel-heading">
               <div>
                 <p className="eyebrow">Sticker price</p>
-                <h2>Enter price from sticker</h2>
+                <h2 className="text-base sm:text-lg md:text-2xl">Enter price from sticker</h2>
               </div>
               <button
-                className="button button-ghost self-start sm:self-auto"
+                className="button button-ghost self-start sm:self-auto text-xs sm:text-sm"
                 type="button"
                 onClick={closePricePrompt}
               >
@@ -423,15 +429,15 @@ export function ScannerPanel({
               </button>
             </div>
 
-            <form className="space-y-4" onSubmit={handlePricePromptSubmit}>
-              <div className="rounded-lg border border-outline-variant/20 bg-surface-container-lowest p-4 text-sm">
+            <form className="space-y-3 sm:space-y-4" onSubmit={handlePricePromptSubmit}>
+              <div className="rounded-lg border border-outline-variant/20 bg-surface-container-lowest p-2 sm:p-3 md:p-4 text-xs sm:text-sm">
                 <p className="text-on-secondary-container">Scanned barcode</p>
-                <p className="mt-1 font-mono text-on-surface break-all">{pricePromptBarcode}</p>
+                <p className="mt-1 font-mono text-on-surface break-all text-xs">{pricePromptBarcode}</p>
               </div>
 
               <div className="inventory-grid">
                 <input
-                  className="text-input"
+                  className="text-input text-xs sm:text-sm py-2 sm:py-3"
                   type="number"
                   step="0.01"
                   min={0}
@@ -443,7 +449,7 @@ export function ScannerPanel({
                   required
                 />
                 <input
-                  className="text-input"
+                  className="text-input text-xs sm:text-sm py-2 sm:py-3"
                   type="number"
                   step="0.01"
                   min={0}
@@ -455,7 +461,7 @@ export function ScannerPanel({
                   }
                 />
                 <input
-                  className="text-input"
+                  className="text-input text-xs sm:text-sm py-2 sm:py-3"
                   type="number"
                   min={1}
                   step="1"
@@ -467,9 +473,9 @@ export function ScannerPanel({
                 />
               </div>
 
-              {pricePromptError ? <p className="error-text">{pricePromptError}</p> : null}
+              {pricePromptError ? <p className="error-text text-xs sm:text-sm">{pricePromptError}</p> : null}
 
-              <button className="button button-primary w-full" type="submit">
+              <button className="button button-primary w-full text-xs sm:text-sm" type="submit">
                 Continue
               </button>
             </form>
