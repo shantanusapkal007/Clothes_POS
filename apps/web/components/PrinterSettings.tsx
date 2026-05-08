@@ -374,32 +374,34 @@ export function PrinterSettings({ onClose }: PrinterSettingsProps) {
 
       {/* Drawer / Modal */}
       <motion.div
-        initial={{ y: "100%", opacity: 0 }}
-        animate={{ y: 0, opacity: 1 }}
-        exit={{ y: "100%", opacity: 0 }}
+        initial={{ y: "100%" }}
+        animate={{ y: 0 }}
+        exit={{ y: "100%" }}
         transition={{ type: "spring", damping: 30, stiffness: 300 }}
-        className="mobile-drawer"
+        className={onClose ? "mobile-drawer" : "flex flex-col h-full"}
       >
-        <div className="mobile-drawer__handle" />
+        {onClose && <div className="mobile-drawer__handle" />}
 
         {/* Header */}
         <div className="flex items-center justify-between gap-3 border-b border-outline-variant/30 px-4 pb-3 pt-1 md:px-8 md:pb-5 md:pt-4">
           <div className="min-w-0">
             <h1 className="font-serif text-xl font-bold tracking-tight text-primary md:text-3xl">
-              Printer Settings
+              Settings
             </h1>
             <p className="mt-0.5 hidden text-xs text-on-secondary-container md:block md:text-sm">
-              Configure direct thermal printing and bill layout.
+              Configure store details, billing, and printers.
             </p>
           </div>
-          <button
-            className="material-symbols-outlined cursor-pointer rounded-lg p-2 text-secondary transition-colors hover:bg-error-container/50 hover:text-error"
-            onClick={onClose}
-            title="Close"
-            type="button"
-          >
-            close
-          </button>
+          {onClose && (
+            <button
+              className="material-symbols-outlined cursor-pointer rounded-lg p-2 text-secondary transition-colors hover:bg-error-container/50 hover:text-error"
+              onClick={onClose}
+              title="Close"
+              type="button"
+            >
+              close
+            </button>
+          )}
         </div>
 
         {/* Tab Switcher */}

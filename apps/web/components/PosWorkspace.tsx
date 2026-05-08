@@ -388,35 +388,26 @@ export function PosWorkspace() {
         <div className={`flex flex-col ${mobileView === "cart" ? "hidden xl:flex" : "flex"} xl:flex-1 xl:overflow-hidden xl:border-r xl:border-outline-variant/20`}>
           {/* Search — compact on mobile */}
           <div className="flex-shrink-0 border-b border-outline-variant/20 bg-surface-dim p-3 sm:p-4">
-            <ScannerPanel
-              barcodeInput={barcodeInput}
-              setBarcodeInput={setBarcodeInput}
-              onBarcodeSubmit={handleBarcodeSubmit}
-            />
-            <div className="mt-2">
-              <div className="flex items-center gap-2 rounded-xl border border-outline-variant/40 bg-white px-3 py-2">
-                <span className="material-symbols-outlined text-on-secondary-container/40" style={{ fontSize: 18 }}>search</span>
-                <input
-                  className="flex-1 border-none bg-transparent text-sm text-on-surface placeholder:text-on-secondary-container/50 focus:outline-none focus:ring-0"
-                  placeholder="Search products..."
-                  value={search}
-                  onChange={(event) => setSearch(event.target.value)}
+            <div className="flex items-center gap-2 rounded-xl border border-outline-variant/40 bg-white px-3 py-2">
+              <span className="material-symbols-outlined text-on-secondary-container/40" style={{ fontSize: 18 }}>search</span>
+              <input
+                className="flex-1 border-none bg-transparent text-sm text-on-surface placeholder:text-on-secondary-container/50 focus:outline-none focus:ring-0"
+                placeholder="Search products..."
+                value={search}
+                onChange={(event) => setSearch(event.target.value)}
+                style={{ fontSize: 16 }}
+              />
+              {search && (
+                <button
+                  onClick={() => setSearch("")}
+                  className="material-symbols-outlined text-on-secondary-container/40"
                   style={{ fontSize: 16 }}
-                />
-                {search && (
-                  <button
-                    onClick={() => setSearch("")}
-                    className="material-symbols-outlined text-on-secondary-container/40"
-                    style={{ fontSize: 16 }}
-                  >
-                    close
-                  </button>
-                )}
-              </div>
+                >
+                  close
+                </button>
+              )}
             </div>
           </div>
-
-          {/* Product Grid — scrollable */}
           <div className="flex-1 overflow-y-auto p-3 sm:p-4" style={{ WebkitOverflowScrolling: "touch" }}>
             {loading ? (
               <div className="grid grid-cols-3 gap-2 sm:grid-cols-4 md:grid-cols-5">
@@ -437,6 +428,15 @@ export function PosWorkspace() {
                 </p>
               </div>
             )}
+          </div>
+
+          {/* Scanner at the bottom */}
+          <div className="flex-shrink-0 border-t border-outline-variant/20 bg-surface-dim p-3 sm:p-4">
+            <ScannerPanel
+              barcodeInput={barcodeInput}
+              setBarcodeInput={setBarcodeInput}
+              onBarcodeSubmit={handleBarcodeSubmit}
+            />
           </div>
         </div>
 
