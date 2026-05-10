@@ -72,7 +72,8 @@ export function PosWorkspace() {
     updateItem
   } = useCartStore();
   const storeName = useStoreName();
-  const [products, setProducts] = useState<Product[]>([]);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [totalCount, setTotalCount] = useState<number | null>(null);
   const [search, setSearch] = useState("");
   const [barcodeInput, setBarcodeInput] = useState("");
   const [loading, setLoading] = useState(true);
@@ -116,12 +117,13 @@ export function PosWorkspace() {
   );
   const printerStatus = useMemo(() => describePrinterRoute(), [printerSettingsOpen, billPreviewOpen]);
 
-  const loadProducts = async () => {
+  const loadProducts = async (page = 1) => {
     try {
       setLoading(true);
-      const nextProducts = await getProducts();
-      setProducts(nextProducts);
-      setError(null);
+      const { items, totalCount } = await getProducts({ page, pageSize: 20 });
+      setProducts((prev) => (page === 1 ? items : [...prev, ...items]));
+      setTotalCount(totalCount);
+      setCurrentPage(page);
     } catch (loadError) {
       setError(loadError instanceof Error ? loadError.message : "Unable to load products");
     } finally {
@@ -433,6 +435,15 @@ export function PosWorkspace() {
               </div>
             ) : visibleProducts.length > 0 ? (
               <ProductGrid products={visibleProducts} onAdd={handleProductAdd} />
+{totalCount && products.length < totalCount && (
+  <button
+    className="mt-4 px-4 py-2 bg-primary text-white rounded"
+    onClick={() => loadProducts(currentPage + 1)}
+    disabled={loading}
+  >
+    {loading ? "Loading…" : "Load More"}
+  </button>
+)}
             ) : (
               <div className="flex flex-col items-center justify-center py-8 text-center sm:py-12">
                 <span className="material-symbols-outlined text-3xl sm:text-4xl text-on-surface-variant/30 mb-2 sm:mb-3">

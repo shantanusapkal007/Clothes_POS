@@ -17,6 +17,8 @@ model Organization {
   members   Membership[]
   products  Product[]
   bills     Bill[]
+  expenses  Expense[]
+  ledgerEntries LedgerEntry[]
 
   @@map("organizations")
 }
@@ -33,6 +35,8 @@ model Store {
   members        Membership[]
   products       Product[]
   bills          Bill[]
+  expenses       Expense[]
+  ledgerEntries LedgerEntry[]
 
   @@index([organizationId])
   @@map("stores")
@@ -76,6 +80,7 @@ model Product {
   billItems       BillItem[]
 
   @@unique([storeId, barcode])
+  @@index([name])
   @@index([organizationId])
   @@index([storeId])
   @@map("products")
@@ -156,6 +161,7 @@ model Customer {
   createdAt      DateTime  @default(now()) @map("created_at")
   updatedAt      DateTime  @updatedAt @map("updated_at")
   payments       Payment[]
+  ledgerEntries LedgerEntry[]
 
   @@unique([storeId, phone])
   @@index([storeId])
@@ -179,3 +185,40 @@ model Payment {
   @@map("payments")
 }
 
+model Expense {
+  id             String   @id @default(cuid())
+  organizationId String   @map("organization_id")
+  storeId        String   @map("store_id")
+  amount         Decimal  @db.Decimal(10, 2)
+  category       String
+  description    String?
+  date           DateTime @default(now())
+  createdAt      DateTime @default(now()) @map("created_at")
+  updatedAt      DateTime @updatedAt @map("updated_at")
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  store          Store        @relation(fields: [storeId], references: [id], onDelete: Cascade)
+
+  @@index([storeId])
+  @@index([date])
+  @@map("expenses")
+}
+
+model LedgerEntry {
+  id             String   @id @default(cuid())
+  organizationId String   @map("organization_id")
+  storeId        String   @map("store_id")
+  customerId     String   @map("customer_id")
+  amount         Decimal  @db.Decimal(10, 2)
+  type           String   // "credit" or "debit"
+  note           String?
+  date           DateTime @default(now()) @map("date")
+  createdAt      DateTime @default(now()) @map("created_at")
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  store          Store @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  customer       Customer @relation(fields: [customerId], references: [id], onDelete: Cascade)
+
+  @@index([organizationId])
+  @@index([storeId])
+  @@index([customerId])
+  @@index([date])
+}

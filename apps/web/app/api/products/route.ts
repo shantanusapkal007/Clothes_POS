@@ -27,25 +27,45 @@ export async function GET(request: NextRequest) {
     const tenant = await requireActiveStore();
     const search = request.nextUrl.searchParams.get("search")?.trim();
 
-    const products = await prisma.product.findMany({
-      where: {
-        storeId: tenant.storeId,
-        ...(search
-          ? {
-              OR: [
-                { name: { contains: search, mode: "insensitive" } },
-                { category: { contains: search, mode: "insensitive" } },
-                { barcode: { contains: search, mode: "insensitive" } }
-              ]
-            }
-          : {})
-      },
-      orderBy: {
-        updatedAt: "desc"
-      }
-    });
+    const page = parseInt(request.nextUrl.searchParams.get("page") ?? "1", 10);
+      const pageSize = parseInt(request.nextUrl.searchParams.get("pageSize") ?? "20", 10);
+      const skip = (page - 1) * pageSize;
 
-    return NextResponse.json(products.map(mapProduct));
+      const [products, totalCount] = await Promise.all([
+        prisma.product.findMany({
+          where: {
+            storeId: tenant.storeId,
+            ...(search
+              ? {
+                  OR: [
+                    { name: { contains: search, mode: "insensitive" } },
+                    { category: { contains: search, mode: "insensitive" } },
+                    { barcode: { contains: search, mode: "insensitive" } },
+                  ],
+                }
+              : {}),
+          },
+          orderBy: { updatedAt: "desc" },
+          skip,
+          take: pageSize,
+        }),
+        prisma.product.count({
+          where: {
+            storeId: tenant.storeId,
+            ...(search
+              ? {
+                  OR: [
+                    { name: { contains: search, mode: "insensitive" } },
+                    { category: { contains: search, mode: "insensitive" } },
+                    { barcode: { contains: search, mode: "insensitive" } },
+                  ],
+                }
+              : {}),
+          },
+        }),
+      ]);
+
+      return NextResponse.json({ items: products.map(mapProduct), totalCount });
   } catch (error) {
     const message = getErrorMessage(error, "Unable to load products");
     return NextResponse.json({ message }, { status: getTenantErrorStatus(error, 500) });

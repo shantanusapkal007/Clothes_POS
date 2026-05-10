@@ -42,9 +42,13 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
   return response.json() as Promise<T>;
 }
 
-export function getProducts(search?: string) {
-  const query = search ? `?search=${encodeURIComponent(search)}` : "";
-  return request<Product[]>(`/products${query}`);
+export function getProducts(params?: { search?: string; page?: number; pageSize?: number }) {
+  const query = new URLSearchParams();
+  if (params?.search) query.set("search", params.search);
+  if (params?.page) query.set("page", String(params.page));
+  if (params?.pageSize) query.set("pageSize", String(params.pageSize));
+  const qs = query.toString();
+  return request<{ items: Product[]; totalCount: number }>(`/products${qs ? `?${qs}` : ""}`);
 }
 
 export function getProductByBarcode(code: string) {
@@ -177,9 +181,6 @@ export function recordPayment(customerId: string, data: { amount: number; method
   });
 }
 
-export function addCredit(customerId: string, data: { amount: number; note?: string }) {
-  return request<CustomerResponse>(`/customers/${customerId}/credit`, {
-    method: "POST",
-    body: JSON.stringify(data)
-  });
+export function getStats() {
+  return request<any>(`/stats`);
 }
