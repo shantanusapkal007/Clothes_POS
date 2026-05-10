@@ -1,3 +1,5 @@
+"use client";
+
 import { motion, AnimatePresence } from "framer-motion";
 import { FormEvent, useEffect, useState } from "react";
 import type { BarcodeData } from "../lib/barcode-parser";

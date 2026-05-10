@@ -1,3 +1,5 @@
+"use client";
+
 import { AnimatePresence, motion } from "framer-motion";
 import { useMemo, useState } from "react";
 import { calculateCart } from "../lib/cart-calculations";
