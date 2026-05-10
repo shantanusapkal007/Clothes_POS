@@ -7,12 +7,12 @@ import { createSupabaseBrowserClient } from "../lib/supabase/client";
 import { useStoreName } from "../lib/store-settings";
 
 const NAV_ITEMS = [
-  { name: "Sales", href: "/" as const, icon: "payments" },
-  { name: "Reports", href: "/reports" as const, icon: "analytics" },
-  { name: "Khata", href: "/khata" as const, icon: "account_balance_wallet" },
-  { name: "Stock", href: "/inventory" as const, icon: "inventory_2" },
-  { name: "Settings", href: "/settings" as const, icon: "settings" },
-] as const;
+  { name: "Sales", href: "/", icon: "payments" },
+  { name: "Reports", href: "/reports", icon: "analytics" },
+  { name: "Khata", href: "/khata", icon: "account_balance_wallet" },
+  { name: "Inventory", href: "/inventory", icon: "inventory_2" },
+  { name: "Settings", href: "/settings", icon: "settings" },
+];
 
 export function Navigation() {
   const pathname = usePathname();

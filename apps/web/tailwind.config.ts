@@ -7,7 +7,7 @@ const config: Config = {
     "./lib/**/*.{js,ts,jsx,tsx,mdx}",
   ],
   darkMode: "class",
-  theme: {
+  theme: { 
     extend: {
       colors: {
         "error-container": "#fee4e2",
