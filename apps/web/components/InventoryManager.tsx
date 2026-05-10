@@ -41,7 +41,7 @@ export function InventoryManager() {
     try {
       setLoading(true);
       const data = await getProducts();
-      setProducts(data);
+      setProducts(data.items);
     } catch {
       showMessage("Failed to load inventory", "error");
     } finally {

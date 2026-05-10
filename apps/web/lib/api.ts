@@ -181,6 +181,13 @@ export function recordPayment(customerId: string, data: { amount: number; method
   });
 }
 
+export function addCredit(customerId: string, data: { amount: number; note?: string }) {
+  return request<CustomerResponse>(`/customers/${customerId}/credit`, {
+    method: "POST",
+    body: JSON.stringify(data)
+  });
+}
+
 export function getStats() {
   return request<any>(`/stats`);
 }
