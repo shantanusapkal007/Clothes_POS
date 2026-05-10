@@ -137,23 +137,39 @@ export function CreateProductModal({
               <section className="rounded-lg border border-outline-variant/30 bg-white p-4 shadow-[0_4px_20px_rgb(0,0,0,0.02)]">
                 <p className="eyebrow">Pricing & Inventory</p>
                 <div className="inventory-grid">
-                  <div className="relative">
-                    <span className="absolute left-4 top-1/2 -translate-y-1/2 font-bold text-on-surface-variant/50">
-                      Rs
-                    </span>
-                    <input
-                      className="text-input w-full pl-11 font-headline font-bold text-primary"
-                      type="number"
-                      step="0.01"
-                      min={0}
-                      placeholder="Price"
-                      value={form.price || ""}
-                      onChange={(event) =>
-                        setForm((prev) => ({ ...prev, price: Number(event.target.value) }))
-                      }
-                      required
-                    />
-                  </div>
+                    <div className="relative">
+                      <span className="absolute left-4 top-1/2 -translate-y-1/2 font-bold text-on-surface-variant/50 text-[10px]">
+                        Cost
+                      </span>
+                      <input
+                        className="text-input w-full pl-11 font-bold text-on-surface"
+                        type="number"
+                        step="0.01"
+                        min={0}
+                        placeholder="Cost"
+                        value={form.costPrice || ""}
+                        onChange={(event) =>
+                          setForm((prev) => ({ ...prev, costPrice: Number(event.target.value) }))
+                        }
+                      />
+                    </div>
+                    <div className="relative">
+                      <span className="absolute left-4 top-1/2 -translate-y-1/2 font-bold text-on-surface-variant/50 text-[10px]">
+                        Price
+                      </span>
+                      <input
+                        className="text-input w-full pl-11 font-headline font-bold text-primary"
+                        type="number"
+                        step="0.01"
+                        min={0}
+                        placeholder="Price"
+                        value={form.price || ""}
+                        onChange={(event) =>
+                          setForm((prev) => ({ ...prev, price: Number(event.target.value) }))
+                        }
+                        required
+                      />
+                    </div>
                   <input
                     className="text-input"
                     type="number"

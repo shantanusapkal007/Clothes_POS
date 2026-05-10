@@ -42,6 +42,16 @@ export function CartPanel({
   const [paymentMethod, setPaymentMethod] = useState<(typeof PAYMENT_METHODS)[number]["id"]>("cash");
   const [customerPhone, setCustomerPhone] = useState("");
   const [sendWhatsApp, setSendWhatsApp] = useState(false);
+
+  const handlePhoneChange = (val: string) => {
+    setCustomerPhone(val);
+    const normalized = val.replace(/[^\d]/g, "");
+    if (normalized.length >= 10) {
+      setSendWhatsApp(true);
+    } else if (normalized.length === 0) {
+      setSendWhatsApp(false);
+    }
+  };
   const [expandedItem, setExpandedItem] = useState<string | null>(null);
   const summary = calculateCart(items, billDiscountPercent, billManualDiscountAmount);
   const lineMap = useMemo(
@@ -389,7 +399,7 @@ export function CartPanel({
                 placeholder="Customer WhatsApp number"
                 value={customerPhone}
                 disabled={!sendWhatsApp}
-                onChange={(event) => setCustomerPhone(event.target.value)}
+                onChange={(event) => handlePhoneChange(event.target.value)}
               />
               {sendWhatsApp && !canSendWhatsApp ? (
                 <p className="mt-1 sm:mt-1.5 text-[8px] sm:text-[10px] md:text-xs font-medium text-error">

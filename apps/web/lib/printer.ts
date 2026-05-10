@@ -71,7 +71,7 @@ const PRINTER_STORAGE_KEY = "printer-config";
 const BILL_LAYOUT_STORAGE_KEY = "bill-layout-config";
 const PAIRED_BT_DEVICES_STORAGE_KEY = "paired-bt-devices";
 
-export const STORE_WHATSAPP_NUMBER = "+919552884468";
+export const STORE_WHATSAPP_NUMBER = "";
 
 const USB_REQUEST_FILTERS = [
   { classCode: 0x07 },
@@ -114,8 +114,8 @@ export const DEFAULT_PRINTER_CONFIG: PrinterConfig = {
 
 export const DEFAULT_BILL_LAYOUT: BillLayoutConfig = {
   companyName: "Clothing Store",
-  companyPhone: STORE_WHATSAPP_NUMBER,
-  whatsappSenderPhone: STORE_WHATSAPP_NUMBER,
+  companyPhone: "",
+  whatsappSenderPhone: "",
   showItemDetails: true,
   showTaxBreakdown: true,
   showDiscountBreakdown: true,

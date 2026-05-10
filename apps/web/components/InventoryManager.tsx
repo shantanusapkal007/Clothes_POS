@@ -187,17 +187,36 @@ export function InventoryManager() {
             </div>
           </div>
 
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
             <div className="space-y-2">
               <label className="flex items-center gap-1 text-xs font-bold uppercase tracking-wider text-on-surface-variant">
-                Price (₹) <span className="text-error">*</span>
+                Purchase Rate (₹)
               </label>
               <div className="relative">
                 <span className="absolute left-4 top-1/2 -translate-y-1/2 font-bold text-on-surface-variant/50">
                   ₹
                 </span>
                 <input
-                  className="field-input pl-11 md:pl-12"
+                  className="field-input pl-11"
+                  placeholder="0.00"
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  value={form.costPrice || ""}
+                  onChange={(e) => setForm({ ...form, costPrice: parseFloat(e.target.value) || 0 })}
+                />
+              </div>
+            </div>
+            <div className="space-y-2">
+              <label className="flex items-center gap-1 text-xs font-bold uppercase tracking-wider text-on-surface-variant">
+                Selling Rate (₹) <span className="text-error">*</span>
+              </label>
+              <div className="relative">
+                <span className="absolute left-4 top-1/2 -translate-y-1/2 font-bold text-on-surface-variant/50">
+                  ₹
+                </span>
+                <input
+                  className="field-input pl-11"
                   placeholder="0.00"
                   type="number"
                   min="0"
@@ -387,7 +406,9 @@ export function InventoryManager() {
                   <tr className="border-b border-outline-variant/20 text-[10px] font-bold uppercase tracking-[0.1em] text-on-surface-variant/60 sm:text-xs sm:tracking-[0.15em]">
                     <th className="pb-4 pl-2 font-bold">Item Detail</th>
                     <th className="pb-4 text-center font-bold">In Stock</th>
-                    <th className="pb-4 text-right font-bold">Price</th>
+                    <th className="pb-4 text-right font-bold">Purchase</th>
+                    <th className="pb-4 text-right font-bold">Selling</th>
+                    <th className="pb-4 text-right font-bold">Margin</th>
                     <th className="pb-4 pr-2 text-right font-bold">Actions</th>
                   </tr>
                 </thead>
@@ -434,11 +455,25 @@ export function InventoryManager() {
                           )}
                         </div>
                       </td>
-                      <td className="py-4 text-right font-serif text-base text-on-surface md:py-6 md:text-lg">
+                      <td className="py-4 text-right md:py-6">
+                        <div className="inline-flex items-center justify-end">
+                          <span className="mr-1 text-xs text-secondary">₹</span>
+                          <input
+                            className="w-20 rounded-lg border border-outline-variant/60 bg-white p-2 text-right font-serif text-sm shadow-sm transition-colors focus:border-primary focus:ring-2 focus:ring-primary/20 md:w-24"
+                            type="number"
+                            value={p.costPrice}
+                            step="0.01"
+                            onChange={(e) =>
+                              handleUpdateField(p.id, "costPrice", parseFloat(e.target.value) || 0)
+                            }
+                          />
+                        </div>
+                      </td>
+                      <td className="py-4 text-right md:py-6">
                         <div className="inline-flex items-center justify-end">
                           <span className="mr-1 text-sm text-secondary">₹</span>
                           <input
-                            className="w-20 rounded-lg border border-outline-variant/60 bg-white p-2 text-right font-serif text-base shadow-sm transition-colors focus:border-primary focus:ring-2 focus:ring-primary/20 md:w-24 md:text-lg"
+                            className="w-20 rounded-lg border border-outline-variant/60 bg-white p-2 text-right font-serif text-sm shadow-sm transition-colors focus:border-primary focus:ring-2 focus:ring-primary/20 md:w-24"
                             type="number"
                             value={p.price}
                             step="0.01"
@@ -446,6 +481,13 @@ export function InventoryManager() {
                               handleUpdateField(p.id, "price", parseFloat(e.target.value) || 0)
                             }
                           />
+                        </div>
+                      </td>
+                      <td className="py-4 text-right md:py-6">
+                        <div className="inline-flex items-center justify-end px-2">
+                          <span className={`text-xs font-bold ${p.price > p.costPrice ? "text-emerald-600" : "text-red-500"}`}>
+                            {p.costPrice > 0 ? (((p.price - p.costPrice) / p.costPrice) * 100).toFixed(0) : "0"}%
+                          </span>
                         </div>
                       </td>
                       <td className="py-4 pr-2 text-right md:py-6">

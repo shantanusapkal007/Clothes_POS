@@ -8,7 +8,7 @@ import { useStoreName } from "../lib/store-settings";
 
 const NAV_ITEMS = [
   { name: "Sales", href: "/" as const, icon: "payments" },
-  { name: "Bills", href: "/bills" as const, icon: "receipt_long" },
+  { name: "Reports", href: "/reports" as const, icon: "analytics" },
   { name: "Khata", href: "/khata" as const, icon: "account_balance_wallet" },
   { name: "Stock", href: "/inventory" as const, icon: "inventory_2" },
   { name: "Settings", href: "/settings" as const, icon: "settings" },

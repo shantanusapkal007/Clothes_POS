@@ -9,17 +9,23 @@ export async function GET(request: NextRequest) {
       by: ["productId"],
       _sum: { quantity: true },
     });
-    const purchases = await prisma.product.findMany({
-      select: { id: true, stock: true, minStock: true, name: true },
+    const products = await prisma.product.findMany({
+      select: { id: true, name: true, stock: true, minStock: true, price: true, costPrice: true },
     });
-    const data = purchases.map(p => {
+    const data = products.map(p => {
       const soldEntry = sold.find(s => s.productId === p.id);
+      const unitsSold = Number(soldEntry?._sum?.quantity ?? 0);
+      const revenue = unitsSold * Number(p.price);
+      const profit = unitsSold * (Number(p.price) - Number(p.costPrice));
+
       return {
         productId: p.id,
         name: p.name,
         stock: p.stock,
         minStock: p.minStock,
-        totalSold: soldEntry?._sum?.quantity ?? 0,
+        totalSold: unitsSold,
+        revenue,
+        profit,
       };
     });
     return NextResponse.json(data);
