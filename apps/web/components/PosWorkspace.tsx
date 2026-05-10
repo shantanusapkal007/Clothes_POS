@@ -72,6 +72,7 @@ export function PosWorkspace() {
     updateItem
   } = useCartStore();
   const storeName = useStoreName();
+  const [products, setProducts] = useState<Product[]>([]);
   const [currentPage, setCurrentPage] = useState(1);
   const [totalCount, setTotalCount] = useState<number | null>(null);
   const [search, setSearch] = useState("");
@@ -434,16 +435,18 @@ export function PosWorkspace() {
                 ))}
               </div>
             ) : visibleProducts.length > 0 ? (
-              <ProductGrid products={visibleProducts} onAdd={handleProductAdd} />
-{totalCount && products.length < totalCount && (
-  <button
-    className="mt-4 px-4 py-2 bg-primary text-white rounded"
-    onClick={() => loadProducts(currentPage + 1)}
-    disabled={loading}
-  >
-    {loading ? "Loading…" : "Load More"}
-  </button>
-)}
+              <>
+                <ProductGrid products={visibleProducts} onAdd={handleProductAdd} />
+                {totalCount && products.length < totalCount && (
+                  <button
+                    className="mt-4 px-4 py-2 bg-primary text-white rounded"
+                    onClick={() => loadProducts(currentPage + 1)}
+                    disabled={loading}
+                  >
+                    {loading ? "Loading…" : "Load More"}
+                  </button>
+                )}
+              </>
             ) : (
               <div className="flex flex-col items-center justify-center py-8 text-center sm:py-12">
                 <span className="material-symbols-outlined text-3xl sm:text-4xl text-on-surface-variant/30 mb-2 sm:mb-3">

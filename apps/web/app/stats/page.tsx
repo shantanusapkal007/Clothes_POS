@@ -1,5 +1,5 @@
 import React from "react";
-import { StatsSection } from "../../../components/StatsSection";
+import { StatsSection } from "../../components/StatsSection";
 
 export default function StatsPage() {
   return (
