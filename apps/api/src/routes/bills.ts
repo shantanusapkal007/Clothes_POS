@@ -145,11 +145,10 @@ const billRoutes: FastifyPluginAsync = async (fastify) => {
         }
       });
 
-      for (const item of summary.items) {
-        const product = productMap.get(item.productId)!;
-
-        await tx.billItem.create({
-          data: {
+      await tx.billItem.createMany({
+        data: summary.items.map((item) => {
+          const product = productMap.get(item.productId)!;
+          return {
             organizationId: tenant["x-organization-id"],
             storeId: tenant["x-store-id"],
             billId: createdBill.id,
@@ -160,18 +159,22 @@ const billRoutes: FastifyPluginAsync = async (fastify) => {
             tax: new Decimal(item.taxAmount),
             total: new Decimal(item.total),
             productName: product.name
-          }
-        });
+          };
+        })
+      });
 
-        await tx.product.update({
-          where: { id: item.productId },
-          data: {
-            stock: {
-              decrement: item.quantity
+      await Promise.all(
+        summary.items.map((item) =>
+          tx.product.update({
+            where: { id: item.productId },
+            data: {
+              stock: {
+                decrement: item.quantity
+              }
             }
-          }
-        });
-      }
+          })
+        )
+      );
 
       return tx.bill.findUniqueOrThrow({
         where: {
