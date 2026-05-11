@@ -1,3 +1,4 @@
+import { Customer, Payment } from "@prisma/client";
 import { Decimal } from "@prisma/client/runtime/library";
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
@@ -8,7 +9,7 @@ import { getTenantErrorStatus, requireActiveStore } from "../../../lib/tenant";
 
 export const runtime = "nodejs";
 
-function mapCustomer(c: any) {
+function mapCustomer(c: Customer & { payments?: Payment[] }) {
   return {
     id: c.id,
     name: c.name,
@@ -16,7 +17,7 @@ function mapCustomer(c: any) {
     balance: Number(c.balance),
     createdAt: c.createdAt,
     updatedAt: c.updatedAt,
-    payments: c.payments?.map((p: any) => ({
+    payments: c.payments?.map((p: Payment) => ({
       id: p.id,
       amount: Number(p.amount),
       method: p.method,
