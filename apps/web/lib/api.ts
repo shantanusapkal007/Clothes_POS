@@ -188,6 +188,10 @@ export function addCredit(customerId: string, data: { amount: number; note?: str
   });
 }
 
-export function getStats() {
-  return request<any>(`/stats`);
+export function getStats(params?: { from?: string; to?: string }) {
+  const query = new URLSearchParams();
+  if (params?.from) query.set("from", params.from);
+  if (params?.to) query.set("to", params.to);
+  const qs = query.toString();
+  return request<any>(`/stats${qs ? `?${qs}` : ""}`);
 }
