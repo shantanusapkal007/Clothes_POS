@@ -1,11 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "../../../lib/prisma";
-import { getTenant } from "../../../lib/auth-server";
+import { requireActiveStore } from "../../../lib/tenant";
 
 export async function GET(request: NextRequest) {
   try {
-    const tenant = await getTenant();
-    if (!tenant) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    const tenant = await requireActiveStore();
 
     const { searchParams } = new URL(request.url);
     const q = searchParams.get("q");
@@ -38,8 +37,7 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   try {
-    const tenant = await getTenant();
-    if (!tenant) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    const tenant = await requireActiveStore();
 
     const body = await request.json();
     const { name, phone, email, address, balance } = body;

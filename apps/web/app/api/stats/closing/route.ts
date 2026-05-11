@@ -1,11 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
-import { prisma } from "../../../lib/prisma";
-import { getTenant } from "../../../lib/auth-server";
+import { prisma } from "../../../../lib/prisma";
+import { requireActiveStore } from "../../../../lib/tenant";
 
 export async function GET(request: NextRequest) {
   try {
-    const tenant = await getTenant();
-    if (!tenant) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    const tenant = await requireActiveStore();
 
     const today = new Date();
     today.setHours(0, 0, 0, 0);
