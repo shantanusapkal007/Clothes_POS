@@ -1,11 +1,11 @@
 const SUPABASE_DIRECT_HOST = /^db\.[a-z0-9]+\.supabase\.co$/i;
 const SUPABASE_POOLER_HOST = /\.pooler\.supabase\.com$/i;
 
-function isSupabaseDirectUrl(url: URL) {
+export function isSupabaseDirectUrl(url: URL) {
   return SUPABASE_DIRECT_HOST.test(url.hostname) && (url.port === "" || url.port === "5432");
 }
 
-function parseDatabaseUrl(rawUrl: string) {
+export function parseDatabaseUrl(rawUrl: string) {
   const url = new URL(rawUrl);
 
   if (
