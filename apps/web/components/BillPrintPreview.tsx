@@ -1,13 +1,16 @@
 "use client";
 
 import { motion } from "framer-motion";
+import { useRef, useState } from "react";
 import {
   buildReceiptText,
   getBillLayoutConfig,
   isIosBrowser,
   isShareAvailable,
-  shareReceiptText
+  shareReceiptText,
+  shareReceiptPdf
 } from "../lib/printer";
+import { generateReceiptPdf } from "../lib/pdf";
 import type { BillDataWithProducts } from "./PosWorkspace";
 
 interface BillPrintPreviewProps {
@@ -36,6 +39,8 @@ export function BillPrintPreview({
   const layout = getBillLayoutConfig();
   const iosBrowser = isIosBrowser();
   const shareAvailable = isShareAvailable();
+  const receiptRef = useRef<HTMLDivElement>(null);
+  const [sharing, setSharing] = useState(false);
   const receiptFontSize =
     layout.fontSize === "small"
       ? "10px"
@@ -63,7 +68,25 @@ export function BillPrintPreview({
     : "Save only";
 
   const handleShare = async () => {
-    await shareReceiptText(receiptContent, billNumber);
+    try {
+      setSharing(true);
+      if (receiptRef.current) {
+        const pdfFile = await generateReceiptPdf(receiptRef.current, `Receipt-${billNumber}.pdf`);
+        const shared = await shareReceiptPdf(pdfFile, billNumber);
+
+        // Fallback to text sharing if PDF share fails or is not supported
+        if (!shared) {
+          await shareReceiptText(receiptContent, billNumber);
+        }
+      } else {
+        await shareReceiptText(receiptContent, billNumber);
+      }
+    } catch (error) {
+      console.error("Error sharing receipt:", error);
+      await shareReceiptText(receiptContent, billNumber);
+    } finally {
+      setSharing(false);
+    }
   };
 
   return (
@@ -127,6 +150,7 @@ export function BillPrintPreview({
         <div className="flex-1 overflow-y-auto border-t border-outline-variant/20 bg-surface-container-lowest px-3 py-4 sm:px-4">
           <div className="hide-scrollbar overflow-x-auto rounded-lg border border-outline-variant/20 bg-[#f8fcfb] p-2">
             <div
+              ref={receiptRef}
               className="mx-auto rounded-lg border border-outline-variant/20 bg-white p-3 shadow-sm"
               style={{ width: `${layout.paperWidth || 80}mm`, maxWidth: "100%" }}
             >
@@ -168,11 +192,15 @@ export function BillPrintPreview({
             {shareAvailable && (
               <button
                 onClick={handleShare}
-                disabled={confirmPending}
+                disabled={confirmPending || sharing}
                 className="flex flex-1 items-center justify-center gap-1.5 rounded-lg border border-outline-variant/30 py-2.5 text-xs font-bold text-primary transition active:scale-95"
               >
-                <span className="material-symbols-outlined text-[16px]">share</span>
-                Share
+                {sharing ? (
+                  <span className="material-symbols-outlined animate-spin text-[16px]">refresh</span>
+                ) : (
+                  <span className="material-symbols-outlined text-[16px]">share</span>
+                )}
+                {sharing ? "Sharing..." : "Share"}
               </button>
             )}
 

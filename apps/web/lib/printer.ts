@@ -1404,3 +1404,28 @@ export async function printReceipt(
   // This is the most reliable path for iOS Safari.
   return openBrowserPrintWindow(content, layout) ? "browser" : "failed";
 }
+
+export async function shareReceiptPdf(
+  file: File,
+  billNumber: string,
+): Promise<boolean> {
+  if (!isShareAvailable()) {
+    return false;
+  }
+
+  // Check if browser supports sharing files
+  if (typeof navigator.canShare === 'function' && !navigator.canShare({ files: [file] })) {
+    return false;
+  }
+
+  try {
+    await navigator.share({
+      title: `Receipt ${billNumber}`,
+      files: [file],
+    });
+    return true;
+  } catch (error) {
+    console.error("Error sharing PDF:", error);
+    return false;
+  }
+}
