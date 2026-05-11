@@ -1,3 +1,4 @@
+import { Prisma } from "@prisma/client";
 import { Decimal } from "@prisma/client/runtime/library";
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
@@ -41,7 +42,7 @@ export async function GET(request: NextRequest) {
     const dateFrom = url.searchParams.get("from") || "";
     const dateTo = url.searchParams.get("to") || "";
 
-    const where: Record<string, unknown> = { storeId: tenant.storeId };
+    const where: Prisma.BillWhereInput = { storeId: tenant.storeId };
 
     if (search) {
       where.OR = [
@@ -52,7 +53,7 @@ export async function GET(request: NextRequest) {
     }
 
     if (dateFrom || dateTo) {
-      const createdAt: Record<string, Date> = {};
+      const createdAt: Prisma.DateTimeFilter = {};
       if (dateFrom) createdAt.gte = new Date(dateFrom);
       if (dateTo) {
         const end = new Date(dateTo);
@@ -64,13 +65,13 @@ export async function GET(request: NextRequest) {
 
     const [bills, total] = await Promise.all([
       prisma.bill.findMany({
-        where: where as any,
+        where: where,
         include: { items: true, refunds: true },
         orderBy: { createdAt: "desc" },
         skip: (page - 1) * limit,
         take: limit,
       }),
-      prisma.bill.count({ where: where as any }),
+      prisma.bill.count({ where: where }),
     ]);
 
     return NextResponse.json({
