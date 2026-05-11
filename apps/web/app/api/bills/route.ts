@@ -25,7 +25,9 @@ const checkoutSchema = z.object({
         taxPercent: z.coerce.number().min(0)
       })
     )
-    .min(1)
+    .min(1),
+  customerName: z.string().optional(),
+  customerPhone: z.string().optional()
 });
 
 export async function GET(request: NextRequest) {
@@ -135,9 +137,60 @@ export async function POST(request: NextRequest) {
           finalAmount: new Decimal(summary.finalAmount),
           billDiscountPercent: new Decimal(body.billDiscountPercent),
           billManualDiscountAmount: new Decimal(body.billManualDiscountAmount),
-          paymentMethod: body.paymentMethod
+          paymentMethod: body.paymentMethod,
+          customerName: body.customerName,
+          customerPhone: body.customerPhone
         }
       });
+
+      // Seamless Khata Integration
+      if (body.paymentMethod === "credit" && body.customerPhone) {
+        // Find or create customer
+        let customer = await tx.customer.findUnique({
+          where: {
+            storeId_phone: {
+              storeId: tenant.storeId,
+              phone: body.customerPhone
+            }
+          }
+        });
+
+        if (!customer && body.customerName) {
+          customer = await tx.customer.create({
+            data: {
+              organizationId: tenant.organizationId,
+              storeId: tenant.storeId,
+              name: body.customerName,
+              phone: body.customerPhone,
+              balance: 0
+            }
+          });
+        }
+
+        if (customer) {
+          // Update balance
+          await tx.customer.update({
+            where: { id: customer.id },
+            data: {
+              balance: {
+                increment: new Decimal(summary.finalAmount)
+              }
+            }
+          });
+
+          // Create ledger entry
+          await tx.ledgerEntry.create({
+            data: {
+              organizationId: tenant.organizationId,
+              storeId: tenant.storeId,
+              customerId: customer.id,
+              amount: new Decimal(summary.finalAmount),
+              type: "credit",
+              note: `Bill #${createdBill.id.slice(-6)}`
+            }
+          });
+        }
+      }
 
       for (const item of summary.items) {
         const product = productMap.get(item.productId)!;

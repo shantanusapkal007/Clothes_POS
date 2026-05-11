@@ -72,7 +72,6 @@ export default function KhataPage() {
 
   const totalPending = useMemo(() => customers.reduce((s, c) => s + c.balance, 0), [customers]);
 
-  /* ── Add customer ── */
   const handleAdd = async () => {
     if (!addName.trim() || !addPhone.trim()) {
       showMsg("Name and phone required", "error");
@@ -96,9 +95,8 @@ export default function KhataPage() {
     }
   };
 
-  /* ── Delete ── */
   const handleDelete = async (c: CustomerResponse) => {
-    if (!confirm(`Delete ${c.name}? All payment history will be lost.`)) return;
+    if (!confirm(`Delete ${c.name}? All history will be lost.`)) return;
     try {
       await deleteCustomer(c.id);
       setCustomers((prev) => prev.filter((x) => x.id !== c.id));
@@ -109,7 +107,6 @@ export default function KhataPage() {
     }
   };
 
-  /* ── Record Payment ── */
   const handlePay = async () => {
     if (!selected) return;
     const amt = parseFloat(payAmount);
@@ -132,7 +129,6 @@ export default function KhataPage() {
     }
   };
 
-  /* ── Add Credit ── */
   const handleCredit = async () => {
     if (!selected) return;
     const amt = parseFloat(creditAmount);
@@ -154,10 +150,9 @@ export default function KhataPage() {
     }
   };
 
-  /* ── WhatsApp reminder ── */
   const sendReminder = (c: CustomerResponse) => {
     const msg = encodeURIComponent(
-      `Hi ${c.name}, this is a reminder about your pending balance of ₹${c.balance.toFixed(2)}. Please visit the store to settle. Thank you!`
+      `Hi ${c.name}, this is a reminder about your pending balance of ₹${c.balance.toFixed(2)} at Clothing POS. Please settle at your earliest convenience. Thank you!`
     );
     const phone = c.phone.replace(/[^0-9]/g, "");
     const url = phone.length >= 10
@@ -167,56 +162,64 @@ export default function KhataPage() {
   };
 
   return (
-    <div className="main-content">
-      <div className="mx-auto max-w-3xl px-3 py-4 pb-24 md:px-6 md:py-8">
-        {/* Header */}
-        <div className="mb-4 flex items-start justify-between">
+    <div className="main-content min-h-screen bg-slate-50/50">
+      <div className="mx-auto max-w-4xl px-4 py-6 pb-32 md:py-10">
+        
+        {/* Header Section */}
+        <div className="mb-8 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <div>
-            <h1 className="text-xl font-bold text-on-surface md:text-2xl">Khata Book</h1>
-            <p className="mt-0.5 text-xs text-on-secondary-container">
-              Customer udhar &amp; payment tracking
-            </p>
+            <h1 className="text-2xl font-black tracking-tight text-slate-900 md:text-3xl">Khata Book</h1>
+            <p className="text-sm font-medium text-slate-500">Premium Ledger Management</p>
           </div>
           <button
             onClick={() => setShowAdd((v) => !v)}
-            className="flex items-center gap-1 rounded-xl bg-primary px-3 py-2 text-xs font-bold text-white shadow-sm transition active:scale-95"
+            className="flex items-center justify-center gap-2 rounded-2xl bg-slate-900 px-6 py-3 text-sm font-bold text-white shadow-xl shadow-slate-200 transition hover:bg-slate-800 active:scale-95"
           >
-            <span className="material-symbols-outlined" style={{ fontSize: 16 }}>
-              {showAdd ? "close" : "person_add"}
-            </span>
-            {showAdd ? "Cancel" : "Add"}
+            <span className="material-symbols-outlined">{showAdd ? "close" : "add"}</span>
+            {showAdd ? "Close Form" : "Add New Customer"}
           </button>
         </div>
 
-        {/* Stats */}
-        <div className="mb-4 flex gap-2">
-          <div className="flex-1 rounded-xl border border-outline-variant/30 bg-white p-3">
-            <p className="text-[10px] font-bold uppercase tracking-wider text-on-secondary-container">Customers</p>
-            <p className="text-lg font-bold tabular-nums text-on-surface">{customers.length}</p>
+        {/* Dynamic Summary Cards */}
+        <div className="mb-8 grid grid-cols-1 gap-4 sm:grid-cols-2">
+          <div className="group relative overflow-hidden rounded-3xl border border-white bg-white/60 p-6 shadow-sm backdrop-blur-xl">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-xs font-bold uppercase tracking-widest text-slate-400">Total Customers</p>
+                <p className="mt-1 text-3xl font-black text-slate-900">{customers.length}</p>
+              </div>
+              <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-indigo-50 text-indigo-600">
+                <span className="material-symbols-outlined text-3xl">groups</span>
+              </div>
+            </div>
           </div>
-          <div className={`flex-1 rounded-xl border p-3 ${totalPending > 0 ? "border-red-200 bg-red-50" : "border-emerald-200 bg-emerald-50"}`}>
-            <p className={`text-[10px] font-bold uppercase tracking-wider ${totalPending > 0 ? "text-red-700" : "text-emerald-700"}`}>
-              Total Pending
-            </p>
-            <p className={`text-lg font-bold tabular-nums ${totalPending > 0 ? "text-red-800" : "text-emerald-800"}`}>
-              ₹{totalPending.toFixed(0)}
-            </p>
+          <div className={`group relative overflow-hidden rounded-3xl border border-white p-6 shadow-sm backdrop-blur-xl transition ${totalPending > 0 ? "bg-rose-50/50" : "bg-emerald-50/50"}`}>
+            <div className="flex items-center justify-between">
+              <div>
+                <p className={`text-xs font-bold uppercase tracking-widest ${totalPending > 0 ? "text-rose-400" : "text-emerald-400"}`}>You'll Get</p>
+                <p className={`mt-1 text-3xl font-black ${totalPending > 0 ? "text-rose-600" : "text-emerald-600"}`}>
+                  ₹{totalPending.toLocaleString("en-IN")}
+                </p>
+              </div>
+              <div className={`flex h-12 w-12 items-center justify-center rounded-2xl ${totalPending > 0 ? "bg-rose-100 text-rose-600" : "bg-emerald-100 text-emerald-600"}`}>
+                <span className="material-symbols-outlined text-3xl">account_balance_wallet</span>
+              </div>
+            </div>
           </div>
         </div>
 
-        {/* Toast */}
+        {/* Notifications */}
         <AnimatePresence>
           {message && (
             <motion.div
-              initial={{ opacity: 0, y: -8 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -8 }}
-              className={`mb-3 rounded-lg border px-3 py-2 text-xs font-medium ${
-                message.type === "error"
-                  ? "border-red-200 bg-red-50 text-red-800"
-                  : "border-emerald-200 bg-emerald-50 text-emerald-800"
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.95 }}
+              className={`mb-6 flex items-center gap-3 rounded-2xl border px-4 py-3 text-sm font-bold shadow-sm ${
+                message.type === "error" ? "border-rose-200 bg-rose-50 text-rose-700" : "border-emerald-200 bg-emerald-50 text-emerald-700"
               }`}
             >
+              <span className="material-symbols-outlined">{message.type === "error" ? "error" : "check_circle"}</span>
               {message.text}
             </motion.div>
           )}
@@ -229,152 +232,140 @@ export default function KhataPage() {
               initial={{ height: 0, opacity: 0 }}
               animate={{ height: "auto", opacity: 1 }}
               exit={{ height: 0, opacity: 0 }}
-              className="mb-4 overflow-hidden"
+              className="mb-8 overflow-hidden"
             >
-              <div className="rounded-xl border border-outline-variant/30 bg-white p-4 space-y-3">
-                <p className="text-xs font-bold uppercase tracking-wider text-on-secondary-container">New Customer</p>
-                <input
-                  className="field-input"
-                  placeholder="Customer Name"
-                  value={addName}
-                  onChange={(e) => setAddName(e.target.value)}
-                  style={{ fontSize: 16 }}
-                />
-                <input
-                  className="field-input"
-                  placeholder="Mobile Number"
-                  type="tel"
-                  value={addPhone}
-                  onChange={(e) => setAddPhone(e.target.value)}
-                  style={{ fontSize: 16 }}
-                />
-                <input
-                  className="field-input"
-                  placeholder="Opening Balance (₹) — optional"
-                  type="number"
-                  value={addBalance}
-                  onChange={(e) => setAddBalance(e.target.value)}
-                  style={{ fontSize: 16 }}
-                />
+              <div className="rounded-3xl border border-white bg-white/40 p-6 shadow-sm backdrop-blur-xl">
+                <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
+                  <div className="space-y-1">
+                    <label className="text-[10px] font-bold uppercase tracking-widest text-slate-400 ml-1">Name</label>
+                    <input
+                      className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-bold text-slate-900 focus:border-slate-900 focus:ring-0"
+                      placeholder="e.g. Rahul Sharma"
+                      value={addName}
+                      onChange={(e) => setAddName(e.target.value)}
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-[10px] font-bold uppercase tracking-widest text-slate-400 ml-1">Phone</label>
+                    <input
+                      className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-bold text-slate-900 focus:border-slate-900 focus:ring-0"
+                      placeholder="e.g. 9876543210"
+                      value={addPhone}
+                      onChange={(e) => setAddPhone(e.target.value)}
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-[10px] font-bold uppercase tracking-widest text-slate-400 ml-1">Initial Udhar</label>
+                    <input
+                      className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-bold text-slate-900 focus:border-slate-900 focus:ring-0"
+                      placeholder="₹0.00"
+                      type="number"
+                      value={addBalance}
+                      onChange={(e) => setAddBalance(e.target.value)}
+                    />
+                  </div>
+                </div>
                 <button
                   onClick={handleAdd}
                   disabled={addPending}
-                  className="flex w-full items-center justify-center gap-2 rounded-xl bg-primary py-3 text-sm font-bold text-white transition active:scale-[0.98] disabled:opacity-50"
+                  className="mt-6 flex w-full items-center justify-center gap-2 rounded-2xl bg-indigo-600 py-4 text-sm font-black text-white shadow-lg shadow-indigo-100 transition hover:bg-indigo-700 active:scale-[0.98] disabled:opacity-50"
                 >
-                  {addPending ? "Adding…" : "Add Customer"}
+                  {addPending ? "SAVING..." : "CREATE CUSTOMER ACCOUNT"}
                 </button>
               </div>
             </motion.div>
           )}
         </AnimatePresence>
 
-        {/* Search */}
-        <div className="mb-3 flex items-center gap-2 rounded-xl border border-outline-variant/40 bg-white px-3 py-2.5">
-          <span className="material-symbols-outlined text-on-secondary-container/50" style={{ fontSize: 18 }}>search</span>
+        {/* Search Bar */}
+        <div className="sticky top-20 z-40 mb-6 flex items-center gap-4 rounded-3xl border border-white bg-white/70 px-6 py-4 shadow-sm backdrop-blur-2xl transition-all duration-300 focus-within:bg-white focus-within:shadow-md">
+          <span className="material-symbols-outlined text-slate-400">search</span>
           <input
-            className="flex-1 border-none bg-transparent text-sm text-on-surface placeholder:text-on-secondary-container/50 focus:outline-none focus:ring-0"
-            placeholder="Search by name or phone…"
+            className="flex-1 border-none bg-transparent text-base font-bold text-slate-900 placeholder:text-slate-300 focus:outline-none focus:ring-0"
+            placeholder="Search by name or phone..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            style={{ fontSize: 16 }}
           />
         </div>
 
         {/* Customer List */}
         {loading ? (
-          <div className="space-y-2">
-            {Array.from({ length: 4 }).map((_, i) => (
-              <div key={i} className="h-16 animate-pulse rounded-xl bg-surface-container-high/50" />
+          <div className="space-y-4">
+            {Array.from({ length: 3 }).map((_, i) => (
+              <div key={i} className="h-24 animate-pulse rounded-3xl bg-white/50" />
             ))}
           </div>
         ) : customers.length === 0 ? (
-          <div className="flex flex-col items-center justify-center py-12 text-center">
-            <span className="material-symbols-outlined mb-2 text-4xl text-on-surface-variant/30">person_off</span>
-            <p className="text-sm font-medium text-on-surface">No customers yet</p>
-            <p className="mt-0.5 text-xs text-on-secondary-container">
-              Add customers to track their pending payments
-            </p>
+          <div className="flex flex-col items-center justify-center rounded-3xl bg-white/40 py-20 text-center">
+            <div className="mb-4 flex h-20 w-20 items-center justify-center rounded-full bg-slate-100">
+              <span className="material-symbols-outlined text-4xl text-slate-300">person_off</span>
+            </div>
+            <h3 className="text-lg font-bold text-slate-900">No Customers Found</h3>
+            <p className="text-sm text-slate-500">Try searching for something else or add a new customer.</p>
           </div>
         ) : (
-          <div className="space-y-2">
+          <div className="grid grid-cols-1 gap-4">
             {customers.map((c) => (
               <motion.div
                 key={c.id}
-                initial={{ opacity: 0, y: 4 }}
+                layout
+                initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
-                className="rounded-xl border border-outline-variant/30 bg-white shadow-sm"
+                className="group relative overflow-hidden rounded-3xl border border-white bg-white/60 p-1 shadow-sm transition-all hover:bg-white hover:shadow-md"
               >
-                <button
-                  type="button"
-                  onClick={() => setSelected(selected?.id === c.id ? null : c)}
-                  className="flex w-full items-center gap-3 p-3 text-left transition active:bg-surface-container-low"
-                >
-                  {/* Avatar */}
-                  <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-primary/10">
-                    <span className="text-sm font-bold text-primary">
-                      {c.name.charAt(0).toUpperCase()}
-                    </span>
-                  </div>
+                <div className="flex flex-col sm:flex-row sm:items-center">
+                  {/* Basic Info */}
+                  <button
+                    onClick={() => setSelected(c)}
+                    className="flex flex-1 items-center gap-4 p-5 text-left"
+                  >
+                    <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-slate-900 text-white shadow-lg shadow-slate-200">
+                      <span className="text-lg font-black">{c.name.charAt(0).toUpperCase()}</span>
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <h3 className="truncate text-base font-bold text-slate-900">{c.name}</h3>
+                      <p className="text-xs font-medium text-slate-400">{c.phone}</p>
+                    </div>
+                    <div className="text-right">
+                      <p className={`text-xl font-black tabular-nums ${c.balance > 0 ? "text-rose-600" : "text-emerald-600"}`}>
+                        ₹{c.balance.toLocaleString("en-IN")}
+                      </p>
+                      <p className="text-[10px] font-black uppercase tracking-widest text-slate-300">
+                        {c.balance > 0 ? "Pending" : "Settled"}
+                      </p>
+                    </div>
+                  </button>
 
-                  {/* Info */}
-                  <div className="min-w-0 flex-1">
-                    <p className="truncate text-sm font-bold text-on-surface">{c.name}</p>
-                    <p className="text-[11px] text-on-secondary-container">{c.phone}</p>
-                  </div>
-
-                  {/* Balance */}
-                  <div className="shrink-0 text-right">
-                    <p className={`text-base font-bold tabular-nums ${c.balance > 0 ? "text-red-600" : "text-emerald-600"}`}>
-                      ₹{c.balance.toFixed(0)}
-                    </p>
-                    <p className="text-[9px] font-bold uppercase text-on-secondary-container/50">
-                      {c.balance > 0 ? "pending" : "clear"}
-                    </p>
-                  </div>
-
-                  <span className="material-symbols-outlined text-on-secondary-container/30" style={{ fontSize: 18 }}>
-                    {selected?.id === c.id ? "expand_less" : "expand_more"}
-                  </span>
-                </button>
-
-                {/* Quick actions row (always visible) */}
-                <div className="flex border-t border-outline-variant/20 divide-x divide-outline-variant/20">
-                  {c.balance > 0 && (
+                  {/* Actions Row */}
+                  <div className="flex border-t border-slate-100 sm:border-l sm:border-t-0">
                     <button
                       onClick={() => sendReminder(c)}
-                      className="flex flex-1 items-center justify-center gap-1 py-2 text-[11px] font-bold text-emerald-700 transition active:bg-emerald-50"
+                      className="flex flex-1 items-center justify-center gap-2 px-6 py-4 text-xs font-black text-emerald-600 transition hover:bg-emerald-50 active:bg-emerald-100 sm:flex-none"
                     >
-                      <span className="material-symbols-outlined" style={{ fontSize: 14 }}>send</span>
-                      WhatsApp
+                      <span className="material-symbols-outlined text-lg">send</span>
+                      REMIND
                     </button>
-                  )}
-                  <button
-                    onClick={() => { setSelected(c); setActiveTab("pay"); }}
-                    className="flex flex-1 items-center justify-center gap-1 py-2 text-[11px] font-bold text-primary transition active:bg-primary/5"
-                  >
-                    <span className="material-symbols-outlined" style={{ fontSize: 14 }}>payments</span>
-                    Pay
-                  </button>
-                  <button
-                    onClick={() => { setSelected(c); setActiveTab("credit"); }}
-                    className="flex flex-1 items-center justify-center gap-1 py-2 text-[11px] font-bold text-amber-700 transition active:bg-amber-50"
-                  >
-                    <span className="material-symbols-outlined" style={{ fontSize: 14 }}>add_card</span>
-                    Udhar
-                  </button>
-                  <button
-                    onClick={() => handleDelete(c)}
-                    className="flex items-center justify-center px-3 py-2 text-[11px] font-bold text-red-500 transition active:bg-red-50"
-                  >
-                    <span className="material-symbols-outlined" style={{ fontSize: 14 }}>delete</span>
-                  </button>
+                    <button
+                      onClick={() => setSelected(c)}
+                      className="flex flex-1 items-center justify-center gap-2 px-6 py-4 text-xs font-black text-slate-900 transition hover:bg-slate-50 active:bg-slate-100 sm:flex-none"
+                    >
+                      <span className="material-symbols-outlined text-lg">history</span>
+                      LEDGER
+                    </button>
+                    <button
+                      onClick={() => handleDelete(c)}
+                      className="flex items-center justify-center px-4 py-4 text-rose-300 transition hover:bg-rose-50 hover:text-rose-600"
+                    >
+                      <span className="material-symbols-outlined text-lg">delete</span>
+                    </button>
+                  </div>
                 </div>
               </motion.div>
             ))}
           </div>
         )}
 
-        {/* ─── Customer Detail Bottom Sheet ─── */}
+        {/* ─── Premium Bottom Sheet (Detail View) ─── */}
         <AnimatePresence>
           {selected && (
             <>
@@ -382,7 +373,7 @@ export default function KhataPage() {
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
                 exit={{ opacity: 0 }}
-                className="fixed inset-0 z-[100] bg-black/40 backdrop-blur-sm"
+                className="fixed inset-0 z-[100] bg-slate-900/40 backdrop-blur-md"
                 onClick={() => setSelected(null)}
               />
               <motion.div
@@ -390,173 +381,167 @@ export default function KhataPage() {
                 animate={{ y: 0 }}
                 exit={{ y: "100%" }}
                 transition={{ type: "spring", damping: 30, stiffness: 300 }}
-                className="fixed inset-x-0 bottom-0 z-[101] max-h-[85vh] overflow-y-auto rounded-t-2xl bg-white shadow-[0_-10px_40px_rgba(0,0,0,0.15)]"
-                style={{ paddingBottom: "env(safe-area-inset-bottom, 16px)" }}
+                className="fixed inset-x-0 bottom-0 z-[101] flex max-h-[92vh] flex-col rounded-t-[40px] bg-white shadow-2xl"
+                style={{ paddingBottom: "env(safe-area-inset-bottom, 24px)" }}
               >
-                <div className="mx-auto mt-2 mb-1 h-1 w-10 rounded-full bg-outline-variant/30" />
+                <div className="mx-auto mt-4 mb-2 h-1.5 w-12 rounded-full bg-slate-100" />
 
-                {/* Header */}
-                <div className="flex items-center justify-between px-4 pb-2 pt-1">
-                  <div className="flex items-center gap-3">
-                    <div className="flex h-10 w-10 items-center justify-center rounded-full bg-primary/10">
-                      <span className="text-lg font-bold text-primary">
-                        {selected.name.charAt(0).toUpperCase()}
-                      </span>
+                {/* Sticky Header inside Sheet */}
+                <div className="flex items-center justify-between border-b border-slate-50 px-8 py-6">
+                  <div className="flex items-center gap-5">
+                    <div className="flex h-16 w-16 items-center justify-center rounded-[24px] bg-slate-900 text-white shadow-xl shadow-slate-200">
+                      <span className="text-2xl font-black">{selected.name.charAt(0).toUpperCase()}</span>
                     </div>
                     <div>
-                      <h2 className="text-base font-bold text-on-surface">{selected.name}</h2>
-                      <p className="text-xs text-on-secondary-container">{selected.phone}</p>
+                      <h2 className="text-xl font-black text-slate-900">{selected.name}</h2>
+                      <div className="mt-1 flex items-center gap-2 text-sm font-bold text-slate-400">
+                        <span className="material-symbols-outlined text-base">call</span>
+                        {selected.phone}
+                      </div>
                     </div>
                   </div>
                   <div className="text-right">
-                    <p className={`text-xl font-bold tabular-nums ${selected.balance > 0 ? "text-red-600" : "text-emerald-600"}`}>
-                      ₹{selected.balance.toFixed(2)}
+                    <p className={`text-3xl font-black tabular-nums ${selected.balance > 0 ? "text-rose-600" : "text-emerald-600"}`}>
+                      ₹{selected.balance.toLocaleString("en-IN")}
                     </p>
-                    <p className="text-[9px] font-bold uppercase text-on-secondary-container/50">
-                      {selected.balance > 0 ? "pending" : "all clear"}
-                    </p>
+                    <p className="text-xs font-black uppercase tracking-widest text-slate-300">Current Balance</p>
                   </div>
                 </div>
 
-                {/* Tab: Pay / Add Credit */}
-                <div className="mx-4 mt-2 mb-3 flex rounded-lg bg-surface-container-high/50 p-0.5">
-                  <button
-                    onClick={() => setActiveTab("pay")}
-                    className={`flex-1 rounded-md py-2 text-xs font-bold transition ${
-                      activeTab === "pay" ? "bg-white text-primary shadow-sm" : "text-on-secondary-container"
-                    }`}
-                  >
-                    Record Payment
-                  </button>
-                  <button
-                    onClick={() => setActiveTab("credit")}
-                    className={`flex-1 rounded-md py-2 text-xs font-bold transition ${
-                      activeTab === "credit" ? "bg-white text-amber-700 shadow-sm" : "text-on-secondary-container"
-                    }`}
-                  >
-                    Add Udhar
-                  </button>
-                </div>
-
-                {/* Pay form */}
-                {activeTab === "pay" && (
-                  <div className="mx-4 mb-3 space-y-2 rounded-xl border border-outline-variant/20 bg-surface-container-lowest p-3">
-                    <div className="flex gap-2">
-                      <input
-                        className="field-input flex-1"
-                        placeholder="Amount (₹)"
-                        type="number"
-                        value={payAmount}
-                        onChange={(e) => setPayAmount(e.target.value)}
-                        style={{ fontSize: 16 }}
-                      />
-                      <select
-                        className="field-input w-24"
-                        value={payMethod}
-                        onChange={(e) => setPayMethod(e.target.value)}
-                      >
-                        <option value="cash">Cash</option>
-                        <option value="upi">UPI</option>
-                        <option value="card">Card</option>
-                      </select>
-                    </div>
-                    <input
-                      className="field-input"
-                      placeholder="Note (optional)"
-                      value={payNote}
-                      onChange={(e) => setPayNote(e.target.value)}
-                      style={{ fontSize: 16 }}
-                    />
-                    {selected.balance > 0 && (
-                      <button
-                        onClick={() => setPayAmount(String(selected.balance))}
-                        className="text-[11px] font-bold text-primary"
-                      >
-                        Full payment: ₹{selected.balance.toFixed(2)}
-                      </button>
-                    )}
+                <div className="flex-1 overflow-y-auto px-6 py-6">
+                  
+                  {/* Action Tabs */}
+                  <div className="mb-8 grid grid-cols-2 gap-3 rounded-3xl bg-slate-50 p-2">
                     <button
-                      onClick={handlePay}
-                      disabled={payPending}
-                      className="flex w-full items-center justify-center gap-1.5 rounded-xl bg-emerald-600 py-3 text-sm font-bold text-white transition active:scale-[0.98] disabled:opacity-50"
+                      onClick={() => setActiveTab("pay")}
+                      className={`flex items-center justify-center gap-2 rounded-2xl py-4 text-sm font-black transition ${
+                        activeTab === "pay" ? "bg-white text-emerald-600 shadow-md" : "text-slate-400"
+                      }`}
                     >
-                      <span className="material-symbols-outlined" style={{ fontSize: 16 }}>payments</span>
-                      {payPending ? "Processing…" : "Record Payment"}
+                      <span className="material-symbols-outlined">payments</span>
+                      PAYMENT IN
+                    </button>
+                    <button
+                      onClick={() => setActiveTab("credit")}
+                      className={`flex items-center justify-center gap-2 rounded-2xl py-4 text-sm font-black transition ${
+                        activeTab === "credit" ? "bg-white text-rose-600 shadow-md" : "text-slate-400"
+                      }`}
+                    >
+                      <span className="material-symbols-outlined">add_card</span>
+                      ADD UDHAR
                     </button>
                   </div>
-                )}
 
-                {/* Credit form */}
-                {activeTab === "credit" && (
-                  <div className="mx-4 mb-3 space-y-2 rounded-xl border border-amber-200 bg-amber-50/50 p-3">
-                    <input
-                      className="field-input"
-                      placeholder="Udhar Amount (₹)"
-                      type="number"
-                      value={creditAmount}
-                      onChange={(e) => setCreditAmount(e.target.value)}
-                      style={{ fontSize: 16 }}
-                    />
-                    <input
-                      className="field-input"
-                      placeholder="Note (e.g. bill ref, item name)"
-                      value={creditNote}
-                      onChange={(e) => setCreditNote(e.target.value)}
-                      style={{ fontSize: 16 }}
-                    />
-                    <button
-                      onClick={handleCredit}
-                      disabled={creditPending}
-                      className="flex w-full items-center justify-center gap-1.5 rounded-xl bg-amber-600 py-3 text-sm font-bold text-white transition active:scale-[0.98] disabled:opacity-50"
-                    >
-                      <span className="material-symbols-outlined" style={{ fontSize: 16 }}>add_card</span>
-                      {creditPending ? "Adding…" : "Add Credit"}
-                    </button>
-                  </div>
-                )}
-
-                {/* Payment History */}
-                <div className="mx-4 mb-4">
-                  <p className="mb-2 text-[9px] font-bold uppercase tracking-wider text-on-secondary-container/60">
-                    Payment History
-                  </p>
-                  {selected.payments.length === 0 ? (
-                    <p className="rounded-lg bg-surface-container-lowest p-3 text-center text-xs text-on-secondary-container/50">
-                      No payments yet
-                    </p>
-                  ) : (
-                    <div className="space-y-1.5">
-                      {selected.payments.map((p) => (
-                        <div key={p.id} className="flex items-center justify-between rounded-lg bg-surface-container-lowest p-2.5">
-                          <div>
-                            <p className="text-xs font-medium text-on-surface">
-                              ₹{p.amount.toFixed(2)}
-                              <span className="ml-1.5 rounded-md bg-surface-container-high px-1.5 py-0.5 text-[9px] font-bold uppercase text-on-secondary-container">
-                                {p.method}
-                              </span>
-                            </p>
-                            {p.note && (
-                              <p className="mt-0.5 text-[10px] text-on-secondary-container/60">{p.note}</p>
-                            )}
-                          </div>
-                          <p className="text-[10px] text-on-secondary-container/50 tabular-nums">
-                            {formatDate(p.createdAt)}
-                          </p>
+                  {/* Form Section */}
+                  <div className="mb-10 animate-in fade-in slide-in-from-bottom-4">
+                    <div className="space-y-4 rounded-[32px] border-2 border-slate-50 bg-white p-6 shadow-sm">
+                      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                        <div className="space-y-1">
+                          <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-1">
+                            {activeTab === "pay" ? "Amount Received" : "Udhar Amount"}
+                          </label>
+                          <input
+                            className="w-full rounded-2xl border border-slate-100 bg-slate-50 px-5 py-4 text-lg font-black text-slate-900 focus:border-slate-900 focus:bg-white focus:ring-0"
+                            placeholder="₹0.00"
+                            type="number"
+                            value={activeTab === "pay" ? payAmount : creditAmount}
+                            onChange={(e) => activeTab === "pay" ? setPayAmount(e.target.value) : setCreditAmount(e.target.value)}
+                          />
                         </div>
-                      ))}
+                        {activeTab === "pay" && (
+                          <div className="space-y-1">
+                            <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-1">Method</label>
+                            <select
+                              className="w-full rounded-2xl border border-slate-100 bg-slate-50 px-5 py-4 text-lg font-black text-slate-900 focus:border-slate-900 focus:bg-white focus:ring-0"
+                              value={payMethod}
+                              onChange={(e) => setPayMethod(e.target.value)}
+                            >
+                              <option value="cash">Cash</option>
+                              <option value="upi">UPI</option>
+                              <option value="card">Card</option>
+                            </select>
+                          </div>
+                        )}
+                      </div>
+                      <div className="space-y-1">
+                        <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-1">Notes</label>
+                        <input
+                          className="w-full rounded-2xl border border-slate-100 bg-slate-50 px-5 py-4 text-base font-bold text-slate-900 focus:border-slate-900 focus:bg-white focus:ring-0"
+                          placeholder="What is this for?"
+                          value={activeTab === "pay" ? payNote : creditNote}
+                          onChange={(e) => activeTab === "pay" ? setPayNote(e.target.value) : setCreditNote(e.target.value)}
+                        />
+                      </div>
+                      <button
+                        onClick={activeTab === "pay" ? handlePay : handleCredit}
+                        disabled={payPending || creditPending}
+                        className={`w-full rounded-2xl py-5 text-base font-black text-white shadow-xl transition active:scale-[0.98] disabled:opacity-50 ${
+                          activeTab === "pay" ? "bg-emerald-600 shadow-emerald-100" : "bg-rose-600 shadow-rose-100"
+                        }`}
+                      >
+                        {activeTab === "pay" 
+                          ? (payPending ? "RECORDING..." : "CONFIRM PAYMENT IN")
+                          : (creditPending ? "SAVING..." : "CONFIRM UDHAR ENTRY")
+                        }
+                      </button>
                     </div>
-                  )}
+                  </div>
+
+                  {/* Visual Ledger Timeline */}
+                  <div className="space-y-6">
+                    <div className="flex items-center justify-between">
+                      <h3 className="text-sm font-black uppercase tracking-widest text-slate-400">Transaction Ledger</h3>
+                      <div className="h-px flex-1 mx-4 bg-slate-100" />
+                    </div>
+                    
+                    {selected.payments.length === 0 ? (
+                      <div className="py-10 text-center">
+                        <p className="text-sm font-bold text-slate-300">No transactions recorded yet.</p>
+                      </div>
+                    ) : (
+                      <div className="relative space-y-4">
+                        {/* Timeline Line */}
+                        <div className="absolute left-[23px] top-0 bottom-0 w-0.5 bg-slate-100" />
+                        
+                        {selected.payments.map((p, idx) => (
+                          <div key={p.id} className="relative flex items-start gap-4">
+                            <div className={`z-10 flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl border-4 border-white shadow-sm ${
+                              p.method === "credit" ? "bg-rose-50 text-rose-600" : "bg-emerald-50 text-emerald-600"
+                            }`}>
+                              <span className="material-symbols-outlined text-lg">
+                                {p.method === "credit" ? "remove_circle" : "add_circle"}
+                              </span>
+                            </div>
+                            <div className="flex-1 rounded-3xl border border-slate-50 bg-slate-50/30 p-4">
+                              <div className="flex items-center justify-between">
+                                <p className={`text-base font-black tabular-nums ${p.method === "credit" ? "text-rose-600" : "text-emerald-600"}`}>
+                                  {p.method === "credit" ? "-" : "+"} ₹{p.amount.toLocaleString("en-IN")}
+                                </p>
+                                <p className="text-[10px] font-bold text-slate-400 uppercase">{formatDate(p.createdAt)}</p>
+                              </div>
+                              <div className="mt-1 flex items-center justify-between">
+                                <p className="text-xs font-bold text-slate-900">
+                                  {p.note || (p.method === "credit" ? "Udhar Entry" : "Payment Received")}
+                                </p>
+                                <span className="text-[9px] font-black uppercase text-slate-300">{p.method}</span>
+                              </div>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
                 </div>
 
-                {/* WhatsApp Reminder */}
+                {/* Footer Reminder */}
                 {selected.balance > 0 && (
-                  <div className="mx-4 mb-4">
+                  <div className="border-t border-slate-50 p-6">
                     <button
                       onClick={() => sendReminder(selected)}
-                      className="flex w-full items-center justify-center gap-2 rounded-xl border-2 border-emerald-200 py-3 text-sm font-bold text-emerald-700 transition active:scale-[0.98]"
+                      className="flex w-full items-center justify-center gap-3 rounded-2xl bg-emerald-50 py-4 text-sm font-black text-emerald-600 transition hover:bg-emerald-100"
                     >
-                      <span className="material-symbols-outlined" style={{ fontSize: 18 }}>send</span>
-                      Send WhatsApp Reminder
+                      <span className="material-symbols-outlined">send</span>
+                      SEND WHATSAPP SUMMARY
                     </button>
                   </div>
                 )}
@@ -564,6 +549,7 @@ export default function KhataPage() {
             </>
           )}
         </AnimatePresence>
+
       </div>
     </div>
   );

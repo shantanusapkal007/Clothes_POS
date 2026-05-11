@@ -8,6 +8,7 @@ import { useCartStore } from "../lib/cart-store";
 export type CheckoutRequest = {
   paymentMethod: string;
   customerPhone: string;
+  customerName?: string;
   sendWhatsApp: boolean;
 };
 
@@ -20,6 +21,7 @@ interface CartPanelProps {
 
 const PAYMENT_METHODS = [
   { id: "cash", label: "Cash", icon: "payments" },
+  { id: "credit", label: "Udhar", icon: "add_card" },
   { id: "card", label: "Card", icon: "credit_card" },
   { id: "upi", label: "UPI", icon: "qr_code_2" }
 ] as const;
@@ -41,6 +43,7 @@ export function CartPanel({
   } = useCartStore();
   const [paymentMethod, setPaymentMethod] = useState<(typeof PAYMENT_METHODS)[number]["id"]>("cash");
   const [customerPhone, setCustomerPhone] = useState("");
+  const [customerName, setCustomerName] = useState("");
   const [sendWhatsApp, setSendWhatsApp] = useState(false);
 
   const handlePhoneChange = (val: string) => {
@@ -351,7 +354,7 @@ export function CartPanel({
               <span className="mb-1.5 sm:mb-2 block text-[8px] sm:text-[9px] md:text-[10px] font-bold uppercase tracking-[0.15em] text-on-secondary-container">
                 Payment Method
               </span>
-              <div className="grid grid-cols-3 gap-1 sm:gap-1.5 md:gap-2">
+              <div className="grid grid-cols-4 gap-1 sm:gap-1.5 md:gap-2">
                 {PAYMENT_METHODS.map((method) => (
                   <motion.button
                     key={method.id}
@@ -373,40 +376,41 @@ export function CartPanel({
               </div>
             </div>
 
-            {/* WhatsApp Toggle */}
-            <label className="block rounded-lg border border-emerald-200/70 bg-emerald-50/85 p-2 sm:p-3 md:p-4 shadow-sm">
-              <div className="flex cursor-pointer items-start gap-2">
+            <div className="block rounded-lg border border-slate-200 bg-slate-50 p-2 sm:p-3 md:p-4 shadow-sm">
+              <span className="mb-1.5 block text-[8px] sm:text-[9px] md:text-[10px] font-bold uppercase tracking-[0.15em] text-slate-500">
+                Customer Information
+              </span>
+              <div className="space-y-2">
                 <input
-                  className="mt-1 rounded border-emerald-300 text-emerald-700 focus:ring-emerald-600"
+                  className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs sm:text-sm text-on-surface shadow-sm outline-none transition focus:border-primary focus:ring-4 focus:ring-primary/10"
+                  placeholder="Customer Name (for Udhar)"
+                  value={customerName}
+                  onChange={(e) => setCustomerName(e.target.value)}
+                />
+                <input
+                  className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs sm:text-sm text-on-surface shadow-sm outline-none transition focus:border-primary focus:ring-4 focus:ring-primary/10"
+                  type="tel"
+                  placeholder="Phone Number"
+                  value={customerPhone}
+                  onChange={(e) => handlePhoneChange(e.target.value)}
+                />
+              </div>
+              <div className="mt-3 flex cursor-pointer items-center gap-2 border-t border-slate-200 pt-3">
+                <input
+                  className="rounded border-emerald-300 text-emerald-700 focus:ring-emerald-600"
                   type="checkbox"
+                  id="whatsapp-check"
                   checked={sendWhatsApp}
                   onChange={(event) => setSendWhatsApp(event.target.checked)}
                 />
-                <span className="min-w-0 flex-1">
-                  <span className="block text-xs sm:text-sm md:text-base font-bold text-emerald-900">
+                <label htmlFor="whatsapp-check" className="cursor-pointer">
+                  <span className="block text-[10px] sm:text-xs font-bold text-emerald-900">
                     Send bill on WhatsApp
                   </span>
-                  <span className="mt-0.5 block text-[8px] sm:text-[10px] md:text-xs leading-relaxed text-emerald-800/80">
-                    Uses {storeWhatsAppNumber}
-                  </span>
-                </span>
+                </label>
               </div>
+            </div>
 
-              <input
-                className="mt-1.5 sm:mt-2 w-full rounded-lg border border-emerald-200 bg-white px-2 sm:px-3 py-2 sm:py-2.5 text-xs sm:text-sm text-on-surface shadow-sm outline-none transition focus:border-emerald-500 focus:ring-4 focus:ring-emerald-100 disabled:bg-emerald-50 disabled:text-emerald-900/40"
-                type="tel"
-                inputMode="tel"
-                placeholder="Customer WhatsApp number"
-                value={customerPhone}
-                disabled={!sendWhatsApp}
-                onChange={(event) => handlePhoneChange(event.target.value)}
-              />
-              {sendWhatsApp && !canSendWhatsApp ? (
-                <p className="mt-1 sm:mt-1.5 text-[8px] sm:text-[10px] md:text-xs font-medium text-error">
-                  Enter the customer&apos;s WhatsApp number.
-                </p>
-              ) : null}
-            </label>
             {/* Global Bill Discounts */}
             <div className="rounded-lg border border-primary/10 bg-primary/5 p-2 sm:p-3 md:p-4 shadow-sm">
               <span className="mb-1.5 sm:mb-2 block text-[8px] sm:text-[9px] md:text-[10px] font-bold uppercase tracking-[0.15em] text-primary">
@@ -484,6 +488,7 @@ export function CartPanel({
                 onCheckout({
                   paymentMethod,
                   customerPhone: customerPhone.trim(),
+                  customerName: customerName.trim() || undefined,
                   sendWhatsApp: sendWhatsApp && Boolean(customerPhone.trim())
                 })
               }

@@ -1,10 +1,13 @@
-const CACHE_VERSION = "clothing-pos-v1";
+const CACHE_VERSION = "clothing-pos-v2";
 const APP_SHELL_CACHE = `${CACHE_VERSION}-shell`;
 const STATIC_CACHE = `${CACHE_VERSION}-static`;
 
 const APP_SHELL = [
   "/",
   "/inventory",
+  "/reports",
+  "/khata",
+  "/settings",
   "/manifest.webmanifest",
   "/icons/icon-192.png",
   "/icons/icon-512.png",
@@ -42,10 +45,12 @@ self.addEventListener("fetch", (event) => {
 
   const url = new URL(request.url);
 
+  // Don't cache API calls or external origins
   if (url.origin !== self.location.origin || url.pathname.startsWith("/api/")) {
     return;
   }
 
+  // Network-first strategy for HTML pages (navigations)
   if (request.mode === "navigate") {
     event.respondWith(
       fetch(request)
@@ -59,6 +64,7 @@ self.addEventListener("fetch", (event) => {
     return;
   }
 
+  // Cache-first for static assets (Next.js chunks, icons)
   if (url.pathname.startsWith("/_next/static/") || url.pathname.startsWith("/icons/")) {
     event.respondWith(
       caches.match(request).then(
