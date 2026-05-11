@@ -131,6 +131,7 @@ model BillItem {
   productId      String   @map("product_id")
   quantity       Int
   price          Decimal  @db.Decimal(10, 2)
+  costPrice      Decimal  @default(0) @map("cost_price") @db.Decimal(10, 2)
   discount       Decimal  @db.Decimal(10, 2)
   tax            Decimal  @db.Decimal(10, 2)
   total          Decimal  @db.Decimal(10, 2)

@@ -150,6 +150,7 @@ export async function POST(request: NextRequest) {
             productId: item.productId,
             quantity: item.quantity,
             price: new Decimal(item.price),
+            costPrice: product.costPrice,
             discount: new Decimal(item.discountAmount),
             tax: new Decimal(item.taxAmount),
             total: new Decimal(item.total),

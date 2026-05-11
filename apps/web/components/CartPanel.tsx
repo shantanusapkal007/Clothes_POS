@@ -48,7 +48,7 @@ export function CartPanel({
     const normalized = val.replace(/[^\d]/g, "");
     if (normalized.length >= 10) {
       setSendWhatsApp(true);
-    } else if (normalized.length === 0) {
+    } else {
       setSendWhatsApp(false);
     }
   };

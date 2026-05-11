@@ -105,14 +105,16 @@ export default function ReportsPage() {
   const loadStats = useCallback(async () => {
     try {
       setStatsLoading(true);
-      const res = await getStats();
+      const res = await getStats({
+        from: dateFilter === "today" ? new Date().toISOString().split("T")[0] : undefined,
+      });
       setStats(res);
     } catch {
       // ignore
     } finally {
       setStatsLoading(false);
     }
-  }, []);
+  }, [dateFilter]);
 
   useEffect(() => {
     void loadBills();
