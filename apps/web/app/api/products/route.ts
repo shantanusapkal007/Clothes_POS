@@ -27,8 +27,8 @@ export async function GET(request: NextRequest) {
     const tenant = await requireActiveStore();
     const search = request.nextUrl.searchParams.get("search")?.trim();
 
-    const page = parseInt(request.nextUrl.searchParams.get("page") ?? "1", 10);
-      const pageSize = parseInt(request.nextUrl.searchParams.get("pageSize") ?? "20", 10);
+    const page = Math.max(1, parseInt(request.nextUrl.searchParams.get("page") ?? "1", 10));
+      const pageSize = Math.max(1, Math.min(100, parseInt(request.nextUrl.searchParams.get("pageSize") ?? "20", 10)));
       const skip = (page - 1) * pageSize;
 
       const [products, totalCount] = await Promise.all([
