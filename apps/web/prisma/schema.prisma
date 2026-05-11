@@ -225,7 +225,6 @@ model LedgerEntry {
   @@index([organizationId])
   @@index([storeId])
   @@index([customerId])
-  @@index([customerId])
   @@index([date])
 }
 
