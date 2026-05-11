@@ -111,7 +111,7 @@ export function Navigation() {
             return (
               <Link
                 key={item.name}
-                href={item.href}
+                href={item.href as any}
                 title={collapsed ? item.name : undefined}
                 className={`flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-all duration-150 ${
                   collapsed ? "justify-center" : ""
@@ -195,7 +195,7 @@ export function Navigation() {
           return (
             <Link
               key={item.name}
-              href={item.href}
+              href={item.href as any}
               className={`bottom-tab ${
                 isActive ? "bottom-tab--active" : "bottom-tab--inactive"
               }`}

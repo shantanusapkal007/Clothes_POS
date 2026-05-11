@@ -9,34 +9,34 @@ datasource db {
 }
 
 model Organization {
-  id        String       @id @default(cuid())
-  name      String
-  createdAt DateTime     @default(now()) @map("created_at")
-  updatedAt DateTime     @updatedAt @map("updated_at")
-  stores    Store[]
-  members   Membership[]
-  products  Product[]
-  bills     Bill[]
-  expenses  Expense[]
+  id            String        @id @default(cuid())
+  name          String
+  createdAt     DateTime      @default(now()) @map("created_at")
+  updatedAt     DateTime      @updatedAt @map("updated_at")
   ledgerEntries LedgerEntry[]
+  bills         Bill[]
+  expenses      Expense[]
+  members       Membership[]
+  products      Product[]
+  stores        Store[]
 
   @@map("organizations")
 }
 
 model Store {
-  id             String       @id @default(cuid())
-  organizationId String       @map("organization_id")
+  id             String        @id @default(cuid())
+  organizationId String        @map("organization_id")
   name           String
   phone          String?
   address        String?
-  createdAt      DateTime     @default(now()) @map("created_at")
-  updatedAt      DateTime     @updatedAt @map("updated_at")
-  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-  members        Membership[]
-  products       Product[]
+  createdAt      DateTime      @default(now()) @map("created_at")
+  updatedAt      DateTime      @updatedAt @map("updated_at")
+  ledgerEntries  LedgerEntry[]
   bills          Bill[]
   expenses       Expense[]
-  ledgerEntries LedgerEntry[]
+  members        Membership[]
+  products       Product[]
+  organization   Organization  @relation(fields: [organizationId], references: [id], onDelete: Cascade)
 
   @@index([organizationId])
   @@map("stores")
@@ -62,8 +62,6 @@ model Membership {
 
 model Product {
   id              String       @id @default(cuid())
-  organizationId  String       @map("organization_id")
-  storeId         String       @map("store_id")
   name            String
   category        String?
   barcode         String?
@@ -75,9 +73,11 @@ model Product {
   minStock        Int          @default(0) @map("min_stock")
   createdAt       DateTime     @default(now()) @map("created_at")
   updatedAt       DateTime     @updatedAt @map("updated_at")
+  organizationId  String       @map("organization_id")
+  storeId         String       @map("store_id")
+  billItems       BillItem[]
   organization    Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
   store           Store        @relation(fields: [storeId], references: [id], onDelete: Cascade)
-  billItems       BillItem[]
 
   @@unique([storeId, barcode])
   @@index([name])
@@ -87,27 +87,27 @@ model Product {
 }
 
 model Bill {
-  id             String       @id @default(cuid())
-  organizationId String       @map("organization_id")
-  storeId        String       @map("store_id")
-  cashierUserId  String?      @map("cashier_user_id")
-  totalAmount    Decimal      @map("total_amount") @db.Decimal(10, 2)
-  discountAmount Decimal      @map("discount_amount") @db.Decimal(10, 2)
-  taxAmount      Decimal      @map("tax_amount") @db.Decimal(10, 2)
-  finalAmount    Decimal      @map("final_amount") @db.Decimal(10, 2)
-  billDiscountPercent Decimal  @default(0) @map("bill_discount_percent") @db.Decimal(5, 2)
-  billManualDiscountAmount Decimal @default(0) @map("bill_manual_discount_amount") @db.Decimal(10, 2)
-  paymentMethod  String       @map("payment_method")
-  status         String       @default("completed")
-  customerName   String?      @map("customer_name")
-  customerPhone  String?      @map("customer_phone")
-  refundedAt     DateTime?    @map("refunded_at")
-  refundReason   String?      @map("refund_reason")
-  createdAt      DateTime     @default(now()) @map("created_at")
-  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-  store          Store        @relation(fields: [storeId], references: [id], onDelete: Cascade)
-  items          BillItem[]
-  refunds        Refund[]
+  id                       String       @id @default(cuid())
+  totalAmount              Decimal      @map("total_amount") @db.Decimal(10, 2)
+  discountAmount           Decimal      @map("discount_amount") @db.Decimal(10, 2)
+  taxAmount                Decimal      @map("tax_amount") @db.Decimal(10, 2)
+  finalAmount              Decimal      @map("final_amount") @db.Decimal(10, 2)
+  paymentMethod            String       @map("payment_method")
+  createdAt                DateTime     @default(now()) @map("created_at")
+  organizationId           String       @map("organization_id")
+  storeId                  String       @map("store_id")
+  cashierUserId            String?      @map("cashier_user_id")
+  customerName             String?      @map("customer_name")
+  customerPhone            String?      @map("customer_phone")
+  refundReason             String?      @map("refund_reason")
+  refundedAt               DateTime?    @map("refunded_at")
+  status                   String       @default("completed")
+  billDiscountPercent      Decimal      @default(0) @map("bill_discount_percent") @db.Decimal(5, 2)
+  billManualDiscountAmount Decimal      @default(0) @map("bill_manual_discount_amount") @db.Decimal(10, 2)
+  items                    BillItem[]
+  organization             Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  store                    Store        @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  refunds                  Refund[]
 
   @@index([organizationId])
   @@index([storeId])
@@ -132,8 +132,6 @@ model Refund {
 
 model BillItem {
   id             String   @id @default(cuid())
-  organizationId String   @map("organization_id")
-  storeId        String   @map("store_id")
   billId         String   @map("bill_id")
   productId      String   @map("product_id")
   quantity       Int
@@ -143,6 +141,8 @@ model BillItem {
   total          Decimal  @db.Decimal(10, 2)
   productName    String   @map("product_name")
   createdAt      DateTime @default(now()) @map("created_at")
+  organizationId String   @map("organization_id")
+  storeId        String   @map("store_id")
   bill           Bill     @relation(fields: [billId], references: [id], onDelete: Cascade)
   product        Product  @relation(fields: [productId], references: [id])
 
@@ -152,16 +152,16 @@ model BillItem {
 }
 
 model Customer {
-  id             String    @id @default(cuid())
-  organizationId String    @map("organization_id")
-  storeId        String    @map("store_id")
+  id             String        @id @default(cuid())
+  organizationId String        @map("organization_id")
+  storeId        String        @map("store_id")
   name           String
   phone          String
-  balance        Decimal   @default(0) @db.Decimal(10, 2)
-  createdAt      DateTime  @default(now()) @map("created_at")
-  updatedAt      DateTime  @updatedAt @map("updated_at")
+  balance        Decimal       @default(0) @db.Decimal(10, 2)
+  createdAt      DateTime      @default(now()) @map("created_at")
+  updatedAt      DateTime      @updatedAt @map("updated_at")
+  ledgerEntries  LedgerEntry[]
   payments       Payment[]
-  ledgerEntries LedgerEntry[]
 
   @@unique([storeId, phone])
   @@index([storeId])
@@ -186,15 +186,15 @@ model Payment {
 }
 
 model Expense {
-  id             String   @id @default(cuid())
-  organizationId String   @map("organization_id")
-  storeId        String   @map("store_id")
-  amount         Decimal  @db.Decimal(10, 2)
+  id             String       @id @default(cuid())
+  organizationId String       @map("organization_id")
+  storeId        String       @map("store_id")
+  amount         Decimal      @db.Decimal(10, 2)
   category       String
   description    String?
-  date           DateTime @default(now())
-  createdAt      DateTime @default(now()) @map("created_at")
-  updatedAt      DateTime @updatedAt @map("updated_at")
+  date           DateTime     @default(now())
+  createdAt      DateTime     @default(now()) @map("created_at")
+  updatedAt      DateTime     @updatedAt @map("updated_at")
   organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
   store          Store        @relation(fields: [storeId], references: [id], onDelete: Cascade)
 
@@ -204,18 +204,18 @@ model Expense {
 }
 
 model LedgerEntry {
-  id             String   @id @default(cuid())
-  organizationId String   @map("organization_id")
-  storeId        String   @map("store_id")
-  customerId     String   @map("customer_id")
-  amount         Decimal  @db.Decimal(10, 2)
-  type           String   // "credit" or "debit"
+  id             String       @id @default(cuid())
+  organizationId String       @map("organization_id")
+  storeId        String       @map("store_id")
+  customerId     String       @map("customer_id")
+  amount         Decimal      @db.Decimal(10, 2)
+  type           String
   note           String?
-  date           DateTime @default(now()) @map("date")
-  createdAt      DateTime @default(now()) @map("created_at")
+  date           DateTime     @default(now()) @map("date")
+  createdAt      DateTime     @default(now()) @map("created_at")
+  customer       Customer     @relation(fields: [customerId], references: [id], onDelete: Cascade)
   organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-  store          Store @relation(fields: [storeId], references: [id], onDelete: Cascade)
-  customer       Customer @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  store          Store        @relation(fields: [storeId], references: [id], onDelete: Cascade)
 
   @@index([organizationId])
   @@index([storeId])
