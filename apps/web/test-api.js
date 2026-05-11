@@ -18,5 +18,4 @@ fetch('http://localhost:3001/api/products', {
   body: JSON.stringify(body)
 })
 .then(r => Promise.all([r.status, r.json()]))
-.then(console.log)
 .catch(console.error);
