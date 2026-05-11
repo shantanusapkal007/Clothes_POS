@@ -18,14 +18,34 @@ const checkoutSchema = z.object({
     )
     .min(1)
 });
+import type { FastifyRequest, FastifyInstance } from "fastify";
+
 const tenantHeadersSchema = z.object({
-  "x-organization-id": z.string().min(1),
-  "x-store-id": z.string().min(1),
-  "x-user-id": z.string().optional()
+  "x-store-id": z.string().min(1)
 });
 
-function getTenant(headers: unknown) {
-  return tenantHeadersSchema.parse(headers);
+async function getTenant(request: FastifyRequest, fastify: FastifyInstance) {
+  const headers = tenantHeadersSchema.parse(request.headers);
+  const storeId = headers["x-store-id"];
+  const user = request.user;
+
+  if (!user || !user.sub) {
+    throw fastify.httpErrors.unauthorized("Authentication required");
+  }
+
+  const membership = await fastify.prisma.membership.findFirst({
+    where: { userId: user.sub, storeId }
+  });
+
+  if (!membership) {
+    throw fastify.httpErrors.forbidden("User is not a member of this store");
+  }
+
+  return {
+    "x-organization-id": membership.organizationId,
+    "x-store-id": membership.storeId,
+    "x-user-id": membership.userId
+  };
 }
 
 const mapBill = (bill: {
@@ -68,8 +88,10 @@ const mapBill = (bill: {
 });
 
 const billRoutes: FastifyPluginAsync = async (fastify) => {
+  fastify.addHook("onRequest", fastify.authenticate);
+
   fastify.get("/", async (request) => {
-    const tenant = getTenant(request.headers);
+    const tenant = await getTenant(request, fastify);
     const bills = await fastify.prisma.bill.findMany({
       where: {
         storeId: tenant["x-store-id"]
@@ -84,7 +106,7 @@ const billRoutes: FastifyPluginAsync = async (fastify) => {
   });
 
   fastify.get("/:id", async (request, reply) => {
-    const tenant = getTenant(request.headers);
+    const tenant = await getTenant(request, fastify);
     const params = z.object({ id: z.string().min(1) }).parse(request.params);
     const bill = await fastify.prisma.bill.findFirst({
       where: {
@@ -102,7 +124,7 @@ const billRoutes: FastifyPluginAsync = async (fastify) => {
   });
 
   fastify.post("/", async (request, reply) => {
-    const tenant = getTenant(request.headers);
+    const tenant = await getTenant(request, fastify);
     const body = checkoutSchema.parse(request.body);
     const productIds = body.items.map((item) => item.productId);
     const products = await fastify.prisma.product.findMany({
@@ -114,7 +136,7 @@ const billRoutes: FastifyPluginAsync = async (fastify) => {
       }
     });
 
-    const productMap = new Map(products.map((product) => [product.id, product]));
+    const productMap = new Map<string, any>(products.map((product: any) => [product.id, product]));
 
     for (const item of body.items) {
       const product = productMap.get(item.productId);
@@ -131,7 +153,7 @@ const billRoutes: FastifyPluginAsync = async (fastify) => {
 
     const summary = calculateCheckout(body.items);
 
-    const bill = await fastify.prisma.$transaction(async (tx) => {
+    const bill = await fastify.prisma.$transaction(async (tx: any) => {
       const createdBill = await tx.bill.create({
         data: {
           organizationId: tenant["x-organization-id"],

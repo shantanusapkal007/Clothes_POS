@@ -1,3 +1,4 @@
+import authPlugin from "./plugins/auth.js";
 import Fastify from "fastify";
 import cors from "@fastify/cors";
 import sensible from "@fastify/sensible";
@@ -16,6 +17,7 @@ export function buildApp() {
   });
   app.register(sensible);
   app.register(prismaPlugin);
+  app.register(authPlugin);
 
   app.setErrorHandler((error, _request, reply) => {
     app.log.error(error);
