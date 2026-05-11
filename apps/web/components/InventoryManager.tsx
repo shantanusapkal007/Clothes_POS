@@ -1,8 +1,10 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, useRef } from "react";
 import { type Product } from "../types";
 import { createProduct, deleteProduct, getProducts, updateProduct } from "../lib/api";
+import { InventorySkeleton } from "./Skeleton";
+import Barcode from "react-barcode";
 
 type FormState = {
   name: string;
@@ -28,14 +30,16 @@ const DEFAULT_FORM: FormState = {
   taxPercent: 0
 };
 
-import { InventorySkeleton } from "./Skeleton";
-
 export function InventoryManager() {
   const [products, setProducts] = useState<Product[]>([]);
   const [form, setForm] = useState<FormState>(DEFAULT_FORM);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
+  const [filterLowStock, setFilterLowStock] = useState(false);
   const [message, setMessage] = useState<{ Text: string; Type: "success" | "error" } | null>(null);
+  
+  const [barcodeToPrint, setBarcodeToPrint] = useState<Product | null>(null);
+  const printRef = useRef<HTMLDivElement>(null);
 
   const loadProducts = async () => {
     try {
@@ -98,15 +102,52 @@ export function InventoryManager() {
   };
 
   const visibleProducts = useMemo(() => {
-    if (!search) return products;
+    let filtered = products;
+    if (filterLowStock) {
+      filtered = filtered.filter(p => p.stock <= p.minStock);
+    }
+    if (!search) return filtered;
     const q = search.toLowerCase();
-    return products.filter(
+    return filtered.filter(
       (p) =>
         p.name.toLowerCase().includes(q) ||
         (p.category && p.category.toLowerCase().includes(q)) ||
         (p.barcode && p.barcode.toLowerCase().includes(q))
     );
-  }, [products, search]);
+  }, [products, search, filterLowStock]);
+
+  const handlePrintBarcode = (p: Product) => {
+    setBarcodeToPrint(p);
+    setTimeout(() => {
+      const content = printRef.current;
+      if (!content) return;
+      const printWindow = window.open("", "_blank");
+      if (!printWindow) return;
+      printWindow.document.write(`
+        <html>
+          <head>
+            <title>Print Barcode - ${p.name}</title>
+            <style>
+              body { display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100vh; margin: 0; font-family: sans-serif; }
+              .label { text-align: center; border: 1px solid #eee; padding: 20px; border-radius: 8px; }
+              .name { font-weight: bold; margin-bottom: 5px; font-size: 14px; }
+              .price { font-size: 18px; font-weight: 900; margin-top: 5px; }
+            </style>
+          </head>
+          <body>
+            <div class="label">
+              <div class="name">${p.name}</div>
+              ${content.innerHTML}
+              <div class="price">₹${p.price}</div>
+            </div>
+            <script>window.onload = () => { window.print(); window.close(); }</script>
+          </body>
+        </html>
+      `);
+      printWindow.document.close();
+      setBarcodeToPrint(null);
+    }, 100);
+  };
 
   const getProductImage = (name: string) => {
     return `https://ui-avatars.com/api/?name=${encodeURIComponent(
@@ -116,6 +157,20 @@ export function InventoryManager() {
 
   return (
     <div className="relative grid grid-cols-1 items-start gap-8 lg:grid-cols-12">
+      {/* Hidden print helper */}
+      <div className="hidden">
+        <div ref={printRef}>
+          {barcodeToPrint && (
+            <Barcode 
+              value={barcodeToPrint.barcode || barcodeToPrint.id.slice(-8)} 
+              width={1.5} 
+              height={50} 
+              fontSize={12}
+            />
+          )}
+        </div>
+      </div>
+
       <div className="pointer-events-none fixed left-1/2 top-4 z-50 flex w-[calc(100%-1.5rem)] max-w-md -translate-x-1/2 flex-col gap-2 sm:w-auto">
         {message && (
           <div
@@ -133,9 +188,9 @@ export function InventoryManager() {
         )}
       </div>
 
-      <section className="rounded-lg border border-outline-variant/30 bg-white/95 p-4 shadow-sm lg:col-span-4 md:p-8">
+      <section className="rounded-2xl border border-outline-variant/30 bg-white/95 p-4 shadow-sm lg:col-span-4 md:p-8">
         <div className="mb-6">
-          <h3 className="mb-1 text-2xl font-serif text-primary">Add clothing stock fast</h3>
+          <h3 className="mb-1 text-2xl font-serif text-primary">Add clothing stock</h3>
           <p className="text-sm text-on-secondary-container">
             Quick register for new seasonal items.
           </p>
@@ -229,7 +284,7 @@ export function InventoryManager() {
             </div>
             <div className="space-y-2">
               <label className="text-xs font-bold uppercase tracking-wider text-on-surface-variant">
-                Initial Stock
+                Stock
               </label>
               <input
                 className="field-input"
@@ -245,17 +300,15 @@ export function InventoryManager() {
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <div className="space-y-2">
               <label className="flex items-center gap-1 text-xs font-bold uppercase tracking-wider text-on-surface-variant">
-                Default Discount %
+                Low Stock Alert at
               </label>
               <input
                 className="field-input"
-                placeholder="0"
+                placeholder="2"
                 type="number"
                 min="0"
-                max="100"
-                step="0.01"
-                value={form.discountPercent === 0 ? "" : form.discountPercent}
-                onChange={(e) => setForm({ ...form, discountPercent: parseFloat(e.target.value) || 0 })}
+                value={form.minStock}
+                onChange={(e) => setForm({ ...form, minStock: parseInt(e.target.value, 10) || 0 })}
               />
             </div>
             <div className="space-y-2">
@@ -275,10 +328,9 @@ export function InventoryManager() {
             </div>
           </div>
 
-
           <button
             type="submit"
-            className="mt-2 flex w-full items-center justify-center gap-2 rounded-lg bg-primary py-4 font-bold text-on-primary shadow-lg shadow-primary/20 transition-all hover:bg-primary-container active:scale-[0.98]"
+            className="mt-2 flex w-full items-center justify-center gap-2 rounded-xl bg-slate-900 py-4 font-bold text-white shadow-lg transition-all hover:bg-slate-800 active:scale-[0.98]"
           >
             <span className="material-symbols-outlined text-lg">add</span>
             Add to Catalog
@@ -286,30 +338,34 @@ export function InventoryManager() {
         </form>
       </section>
 
-      <section className="rounded-lg border border-outline-variant/30 bg-white/95 p-4 shadow-[0_20px_40px_rgba(8,47,46,0.05)] lg:col-span-8 md:p-8">
+      <section className="rounded-2xl border border-outline-variant/30 bg-white/95 p-4 shadow-[0_20px_40px_rgba(8,47,46,0.05)] lg:col-span-8 md:p-8">
         <div className="mb-8 flex flex-col items-start justify-between gap-4 md:flex-row md:items-end">
           <div>
             <h3 className="text-2xl font-serif text-on-surface sm:text-3xl">Current Stock</h3>
             <p className="text-on-secondary-container">
-              {products.length} items currently in floor rotation.
+              {visibleProducts.length} items currently in inventory.
             </p>
           </div>
           <div className="flex w-full gap-2 md:w-auto">
-            <div className="flex flex-grow items-center gap-2 rounded-lg border border-outline-variant/60 bg-white px-4 py-3 shadow-sm transition-all focus-within:border-primary focus-within:ring-2 focus-within:ring-primary/20 md:flex-grow-0 md:py-2">
-              <span className="material-symbols-outlined text-sm text-primary md:text-base">
-                search
-              </span>
+            <button
+              onClick={() => setFilterLowStock(!filterLowStock)}
+              className={`flex items-center gap-2 rounded-xl border px-4 py-2 text-xs font-bold transition ${
+                filterLowStock ? "border-rose-200 bg-rose-50 text-rose-700" : "border-outline-variant/60 bg-white text-slate-500"
+              }`}
+            >
+              <span className="material-symbols-outlined text-sm">warning</span>
+              {filterLowStock ? "Showing Low Stock" : "Low Stock Alerts"}
+            </button>
+            <div className="flex flex-grow items-center gap-2 rounded-xl border border-outline-variant/60 bg-white px-4 py-3 shadow-sm transition-all focus-within:border-primary focus-within:ring-2 focus-within:ring-primary/20 md:flex-grow-0 md:py-2">
+              <span className="material-symbols-outlined text-sm text-primary md:text-base">search</span>
               <input
                 className="w-full border-none bg-transparent p-0 text-sm font-semibold text-on-surface placeholder:text-on-surface-variant/70 focus:ring-0 md:w-48"
-                placeholder="Search catalog..."
+                placeholder="Search..."
                 type="text"
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
               />
             </div>
-            <button className="material-symbols-outlined shrink-0 rounded-lg border border-outline-variant/60 bg-white p-3 text-on-surface-variant shadow-sm transition-colors hover:bg-surface-container-high md:p-2">
-              filter_list
-            </button>
           </div>
         </div>
 
@@ -322,203 +378,92 @@ export function InventoryManager() {
             <p className="text-sm">Store looks empty. Add some new stock!</p>
           </div>
         ) : (
-          <>
-            <div className="space-y-4 md:hidden">
-              {visibleProducts.map((p) => (
-                <article
-                  key={p.id}
-                  className="rounded-lg border border-outline-variant/30 bg-white p-4 shadow-sm"
-                >
-                  <div className="flex items-start gap-3">
-                    <div className="h-14 w-14 shrink-0 overflow-hidden rounded-lg bg-surface-container-high ring-1 ring-outline-variant/20">
-                      <img
-                        alt={p.name}
-                        src={getProductImage(p.name)}
-                        className="h-full w-full object-cover"
-                      />
-                    </div>
-                    <div className="min-w-0 flex-1">
-                      <div className="flex items-start justify-between gap-3">
-                        <div className="min-w-0">
-                          <h4 className="truncate font-serif text-lg text-on-surface">{p.name}</h4>
-                          <p className="mt-1 truncate text-[11px] uppercase tracking-[0.18em] text-on-secondary-container">
-                            {p.category ? `${p.category} • ` : ""}SKU: {p.barcode || p.id.slice(0, 8)}
-                          </p>
+          <div className="hidden overflow-x-auto md:block">
+            <table className="min-w-[600px] w-full border-collapse text-left">
+              <thead>
+                <tr className="border-b border-outline-variant/20 text-[10px] font-bold uppercase tracking-[0.1em] text-on-surface-variant/60 sm:text-xs">
+                  <th className="pb-4 pl-2">Item Detail</th>
+                  <th className="pb-4 text-center">Stock</th>
+                  <th className="pb-4 text-right">Purchase</th>
+                  <th className="pb-4 text-right">Selling</th>
+                  <th className="pb-4 text-right">Margin</th>
+                  <th className="pb-4 pr-2 text-right">Actions</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-outline-variant/10">
+                {visibleProducts.map((p) => (
+                  <tr key={p.id} className="group transition-colors hover:bg-slate-50/50">
+                    <td className="py-4 pl-2 md:py-6">
+                      <div className="flex items-center gap-3">
+                        <div className="h-12 w-12 shrink-0 overflow-hidden rounded-xl bg-slate-100">
+                          <img alt={p.name} src={getProductImage(p.name)} className="h-full w-full object-cover" />
                         </div>
+                        <div className="min-w-0">
+                          <div className="truncate font-serif text-base font-bold text-slate-900">{p.name}</div>
+                          <div className="mt-1 text-[10px] font-black uppercase tracking-widest text-slate-400">
+                            {p.category} • SKU: {p.barcode || p.id.slice(-8)}
+                          </div>
+                        </div>
+                      </div>
+                    </td>
+                    <td className="py-4 text-center md:py-6">
+                      <div className="inline-flex flex-col items-center">
+                        <input
+                          className={`w-16 rounded-xl border p-2 text-center text-sm font-black shadow-sm ${
+                            p.stock <= p.minStock ? "border-rose-200 bg-rose-50 text-rose-600" : "border-slate-100 bg-white text-slate-900"
+                          }`}
+                          type="number"
+                          value={p.stock}
+                          onChange={(e) => handleUpdateField(p.id, "stock", parseInt(e.target.value, 10) || 0)}
+                        />
+                        {p.stock <= p.minStock && <span className="mt-1 text-[8px] font-black uppercase text-rose-500">Low Stock</span>}
+                      </div>
+                    </td>
+                    <td className="py-4 text-right md:py-6">
+                      <input
+                        className="w-24 rounded-xl border border-slate-100 bg-white p-2 text-right font-serif text-sm font-bold focus:border-slate-900 focus:ring-0"
+                        type="number"
+                        value={p.costPrice}
+                        step="0.01"
+                        onChange={(e) => handleUpdateField(p.id, "costPrice", parseFloat(e.target.value) || 0)}
+                      />
+                    </td>
+                    <td className="py-4 text-right md:py-6">
+                      <input
+                        className="w-24 rounded-xl border border-slate-100 bg-white p-2 text-right font-serif text-sm font-bold focus:border-slate-900 focus:ring-0"
+                        type="number"
+                        value={p.price}
+                        step="0.01"
+                        onChange={(e) => handleUpdateField(p.id, "price", parseFloat(e.target.value) || 0)}
+                      />
+                    </td>
+                    <td className="py-4 text-right md:py-6">
+                      <span className={`text-xs font-black ${p.price > p.costPrice ? "text-emerald-600" : "text-rose-500"}`}>
+                        {p.costPrice > 0 ? (((p.price - p.costPrice) / p.costPrice) * 100).toFixed(0) : "0"}%
+                      </span>
+                    </td>
+                    <td className="py-4 pr-2 text-right md:py-6">
+                      <div className="flex justify-end gap-2">
+                        <button
+                          onClick={() => handlePrintBarcode(p)}
+                          className="material-symbols-outlined rounded-xl bg-slate-50 p-2 text-slate-400 transition hover:bg-slate-900 hover:text-white"
+                          title="Print Barcode"
+                        >
+                          barcode_scanner
+                        </button>
                         <button
                           onClick={() => handleDelete(p.id, p.name)}
-                          className="material-symbols-outlined rounded-lg p-2 text-error/70 transition-colors hover:bg-error-container hover:text-error"
+                          className="material-symbols-outlined rounded-xl bg-slate-50 p-2 text-rose-300 transition hover:bg-rose-600 hover:text-white"
                           title="Delete"
                         >
                           delete
                         </button>
                       </div>
-
-                      <div className="mt-4 grid grid-cols-2 gap-3">
-                        <label className="rounded-lg border border-outline-variant/30 bg-white p-3">
-                          <span className="mb-2 block text-[10px] font-bold uppercase tracking-[0.18em] text-on-secondary-container">
-                            Stock
-                          </span>
-                          <input
-                            className={`field-input-compact text-base ${
-                              p.stock <= p.minStock ? "text-error" : "text-on-surface"
-                            }`}
-                            type="number"
-                            value={p.stock}
-                            onChange={(e) =>
-                              handleUpdateField(p.id, "stock", parseInt(e.target.value, 10) || 0)
-                            }
-                          />
-                          {p.stock <= p.minStock && (
-                            <span className="mt-1 block text-[10px] font-bold uppercase tracking-[0.15em] text-error">
-                              Low stock
-                            </span>
-                          )}
-                        </label>
-
-                        <label className="rounded-lg border border-outline-variant/30 bg-white p-3">
-                          <span className="mb-2 block text-[10px] font-bold uppercase tracking-[0.18em] text-on-secondary-container">
-                            Price
-                          </span>
-                          <div className="flex items-center gap-2">
-                            <span className="text-sm text-secondary">₹</span>
-                            <input
-                              className="field-input-compact text-right font-serif text-base"
-                              type="number"
-                              value={p.price}
-                              step="0.01"
-                              onChange={(e) =>
-                                handleUpdateField(p.id, "price", parseFloat(e.target.value) || 0)
-                              }
-                            />
-                          </div>
-                        </label>
-                      </div>
-                    </div>
-                  </div>
-                </article>
-              ))}
-            </div>
-
-            <div className="hidden overflow-x-auto md:block">
-              <table className="min-w-[600px] w-full border-collapse text-left">
-                <thead>
-                  <tr className="border-b border-outline-variant/20 text-[10px] font-bold uppercase tracking-[0.1em] text-on-surface-variant/60 sm:text-xs sm:tracking-[0.15em]">
-                    <th className="pb-4 pl-2 font-bold">Item Detail</th>
-                    <th className="pb-4 text-center font-bold">In Stock</th>
-                    <th className="pb-4 text-right font-bold">Purchase</th>
-                    <th className="pb-4 text-right font-bold">Selling</th>
-                    <th className="pb-4 text-right font-bold">Margin</th>
-                    <th className="pb-4 pr-2 text-right font-bold">Actions</th>
+                    </td>
                   </tr>
-                </thead>
-                <tbody className="divide-y divide-outline-variant/10">
-                  {visibleProducts.map((p) => (
-                    <tr key={p.id} className="group transition-colors hover:bg-surface-container-low/50">
-                      <td className="py-4 pl-2 md:py-6">
-                        <div className="flex items-center gap-3 md:gap-4">
-                          <div className="h-10 w-10 shrink-0 overflow-hidden rounded-lg bg-surface-container-high ring-1 ring-outline-variant/20 md:h-12 md:w-12">
-                            <img
-                              alt={p.name}
-                              src={getProductImage(p.name)}
-                              className="h-full w-full object-cover"
-                            />
-                          </div>
-                          <div className="min-w-0">
-                            <div className="truncate px-1 font-serif text-base leading-tight text-on-surface md:text-lg">
-                              {p.name}
-                            </div>
-                            <div className="mt-1 truncate px-1 text-[10px] uppercase tracking-widest text-on-secondary-container md:text-xs">
-                              {p.category ? `${p.category} • ` : ""}SKU: {p.barcode || p.id.slice(0, 8)}
-                            </div>
-                          </div>
-                        </div>
-                      </td>
-                      <td className="py-4 text-center md:py-6">
-                        <div className="inline-flex flex-col items-center">
-                          <input
-                            className={`w-14 rounded-lg border p-2 text-center text-sm font-bold shadow-sm transition-colors focus:border-primary focus:ring-2 focus:ring-primary/20 md:w-16 ${
-                              p.stock <= p.minStock
-                                ? "border-error/30 bg-error-container/60 text-error"
-                                : "border-outline-variant/60 bg-white text-on-surface"
-                            }`}
-                            type="number"
-                            value={p.stock}
-                            onChange={(e) =>
-                              handleUpdateField(p.id, "stock", parseInt(e.target.value, 10) || 0)
-                            }
-                          />
-                          {p.stock <= p.minStock && (
-                            <span className="mt-1 text-[9px] font-bold uppercase text-error">
-                              Low Stock
-                            </span>
-                          )}
-                        </div>
-                      </td>
-                      <td className="py-4 text-right md:py-6">
-                        <div className="inline-flex items-center justify-end">
-                          <span className="mr-1 text-xs text-secondary">₹</span>
-                          <input
-                            className="w-20 rounded-lg border border-outline-variant/60 bg-white p-2 text-right font-serif text-sm shadow-sm transition-colors focus:border-primary focus:ring-2 focus:ring-primary/20 md:w-24"
-                            type="number"
-                            value={p.costPrice}
-                            step="0.01"
-                            onChange={(e) =>
-                              handleUpdateField(p.id, "costPrice", parseFloat(e.target.value) || 0)
-                            }
-                          />
-                        </div>
-                      </td>
-                      <td className="py-4 text-right md:py-6">
-                        <div className="inline-flex items-center justify-end">
-                          <span className="mr-1 text-sm text-secondary">₹</span>
-                          <input
-                            className="w-20 rounded-lg border border-outline-variant/60 bg-white p-2 text-right font-serif text-sm shadow-sm transition-colors focus:border-primary focus:ring-2 focus:ring-primary/20 md:w-24"
-                            type="number"
-                            value={p.price}
-                            step="0.01"
-                            onChange={(e) =>
-                              handleUpdateField(p.id, "price", parseFloat(e.target.value) || 0)
-                            }
-                          />
-                        </div>
-                      </td>
-                      <td className="py-4 text-right md:py-6">
-                        <div className="inline-flex items-center justify-end px-2">
-                          <span className={`text-xs font-bold ${p.price > p.costPrice ? "text-emerald-600" : "text-red-500"}`}>
-                            {p.costPrice > 0 ? (((p.price - p.costPrice) / p.costPrice) * 100).toFixed(0) : "0"}%
-                          </span>
-                        </div>
-                      </td>
-                      <td className="py-4 pr-2 text-right md:py-6">
-                        <div className="flex justify-end gap-1 transition-opacity sm:opacity-50 group-hover:opacity-100 md:gap-2">
-                          <button
-                            onClick={() => handleDelete(p.id, p.name)}
-                            className="material-symbols-outlined rounded-lg p-2 text-error/60 transition-colors hover:bg-error-container hover:text-error"
-                            title="Delete"
-                          >
-                            delete
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </>
-        )}
-
-        {!loading && visibleProducts.length > 0 && (
-          <div className="mt-8 flex flex-col items-center justify-between gap-4 border-t border-outline-variant/20 pt-6 sm:flex-row">
-            <button className="order-2 text-sm font-bold text-primary transition-all hover:underline sm:order-1">
-              Download Inventory Report (CSV)
-            </button>
-            <div className="order-1 flex items-center gap-4 rounded-lg border border-outline-variant/30 bg-white px-4 py-2 shadow-sm sm:order-2">
-              <span className="text-xs font-medium text-on-secondary-container">
-                {visibleProducts.length} results
-              </span>
-            </div>
+                ))}
+              </tbody>
+            </table>
           </div>
         )}
       </section>

@@ -106,15 +106,18 @@ export default function ReportsPage() {
     try {
       setStatsLoading(true);
       const res = await getStats({
-        from: dateFilter === "today" ? new Date().toISOString().split("T")[0] : undefined,
+        from: getDateRange(dateFilter).from || undefined,
       });
-      setStats(res);
+      setStats(res.items || []);
+      setTotalExpenses(res.summary?.totalExpenses || 0);
     } catch {
       // ignore
     } finally {
       setStatsLoading(false);
     }
   }, [dateFilter]);
+
+  const [totalExpenses, setTotalExpenses] = useState(0);
 
   useEffect(() => {
     void loadBills();
@@ -162,6 +165,7 @@ export default function ReportsPage() {
           total: i.total,
           discountPercent: 0,
           taxPercent: 0,
+          costPrice: 0
         })),
         totalAmount: bill.totalAmount,
         discountAmount: bill.discountAmount,
@@ -187,19 +191,20 @@ export default function ReportsPage() {
   };
 
   const salesStats = useMemo(() => {
-    if (!data?.bills) return { count: 0, total: 0, profit: 0 };
+    if (!data?.bills) return { count: 0, total: 0, profit: 0, netProfit: 0 };
     const bills = data.bills.filter((b) => b.status !== "refunded");
     const total = bills.reduce((s, b) => s + b.finalAmount, 0);
     
-    // Total profit from inventory stats (all time or filtered by active products)
-    const totalProfit = stats.reduce((s, item) => s + (item.profit || 0), 0);
+    // Total profit from inventory stats
+    const totalGrossProfit = stats.reduce((s, item) => s + (item.profit || 0), 0);
 
     return {
       count: bills.length,
       total: total,
-      profit: totalProfit,
+      profit: totalGrossProfit,
+      netProfit: totalGrossProfit - totalExpenses
     };
-  }, [data, stats]);
+  }, [data, stats, totalExpenses]);
 
   const DATE_FILTERS: { key: DateFilter; label: string }[] = [
     { key: "today", label: "Today" },
@@ -211,10 +216,38 @@ export default function ReportsPage() {
   return (
     <div className="main-content">
       <div className="mx-auto max-w-4xl px-3 py-4 pb-24 md:px-6 md:py-8">
-        {/* Header */}
-        <div className="mb-6 flex flex-col gap-1">
-          <span className="text-[10px] font-bold uppercase tracking-[0.22em] text-on-secondary-container">Business Insights</span>
-          <h1 className="text-2xl font-bold text-on-background md:text-3xl">Reports & Dashboard</h1>
+        <div className="mb-8 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex flex-col gap-1">
+            <span className="text-[10px] font-bold uppercase tracking-[0.22em] text-on-secondary-container">Business Insights</span>
+            <h1 className="text-2xl font-bold text-on-background md:text-3xl">Reports & Dashboard</h1>
+          </div>
+          <button
+            onClick={async () => {
+              try {
+                const res = await fetch("/api/stats/closing");
+                const report = await res.json();
+                const text = `*Z-REPORT: ${report.date}*%0A%0A` +
+                  `*Sales Summary:*%0A` +
+                  `Total: ₹${report.summary.totalSales}%0A` +
+                  `Cash: ₹${report.summary.cash}%0A` +
+                  `UPI: ₹${report.summary.upi}%0A` +
+                  `Card: ₹${report.summary.card}%0A` +
+                  `Udhar: ₹${report.summary.credit}%0A%0A` +
+                  `*Profit/Loss:*%0A` +
+                  `Expenses: ₹${report.totalExpenses}%0A` +
+                  `Net Profit: ₹${report.netProfit}%0A%0A` +
+                  `*Top Items:*%0A` +
+                  report.topItems.map((i: any) => `• ${i.name} (${i.qty})`).join("%0A");
+                
+                window.open(`https://wa.me/?text=${text}`, "_blank");
+              } catch {
+                setMessage("Failed to generate Z-Report");
+              }
+            }}
+            className="flex items-center justify-center gap-2 rounded-xl bg-slate-900 px-5 py-3 text-xs font-bold text-white shadow-lg transition active:scale-95"
+          >
+            <span className="material-symbols-outlined text-lg">summarize</span>
+          </button>
         </div>
 
         {/* Top Summary Cards */}
@@ -223,17 +256,17 @@ export default function ReportsPage() {
             <p className="text-[10px] font-bold uppercase tracking-wider text-on-secondary-container/60">Total Sales</p>
             <p className="mt-1 text-xl font-bold tabular-nums text-on-surface">₹{salesStats.total.toLocaleString("en-IN")}</p>
           </div>
+          <div className="rounded-2xl border border-rose-100 bg-rose-50 p-4 shadow-sm">
+            <p className="text-[10px] font-bold uppercase tracking-wider text-rose-700">Expenses</p>
+            <p className="mt-1 text-xl font-bold tabular-nums text-rose-800">₹{totalExpenses.toLocaleString("en-IN")}</p>
+          </div>
           <div className="rounded-2xl border border-emerald-100 bg-emerald-50 p-4 shadow-sm">
-            <p className="text-[10px] font-bold uppercase tracking-wider text-emerald-700">Total Profit</p>
-            <p className="mt-1 text-xl font-bold tabular-nums text-emerald-800">₹{salesStats.profit.toLocaleString("en-IN")}</p>
+            <p className="text-[10px] font-bold uppercase tracking-wider text-emerald-700">Net Profit</p>
+            <p className="mt-1 text-xl font-bold tabular-nums text-emerald-800">₹{salesStats.netProfit.toLocaleString("en-IN")}</p>
           </div>
           <div className="rounded-2xl border border-outline-variant/30 bg-white p-4 shadow-sm">
             <p className="text-[10px] font-bold uppercase tracking-wider text-on-secondary-container/60">Bills Count</p>
             <p className="mt-1 text-xl font-bold tabular-nums text-on-surface">{salesStats.count}</p>
-          </div>
-          <div className="rounded-2xl border border-outline-variant/30 bg-white p-4 shadow-sm">
-            <p className="text-[10px] font-bold uppercase tracking-wider text-on-secondary-container/60">Margin Avg</p>
-            <p className="mt-1 text-xl font-bold tabular-nums text-primary">{salesStats.total > 0 ? ((salesStats.profit / salesStats.total) * 100).toFixed(1) : "0"}%</p>
           </div>
         </div>
 

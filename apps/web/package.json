@@ -13,8 +13,10 @@
     "@supabase/supabase-js": "^2.105.3",
     "framer-motion": "^12.38.0",
     "html5-qrcode": "^2.3.8",
+    "jsbarcode": "^3.12.3",
     "next": "^15.0.0",
     "react": "^19.0.0",
+    "react-barcode": "^1.6.1",
     "react-dom": "^19.0.0",
     "zod": "^3.24.0",
     "zustand": "^5.0.0"

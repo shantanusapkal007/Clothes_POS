@@ -195,3 +195,17 @@ export function getStats(params?: { from?: string; to?: string }) {
   const qs = query.toString();
   return request<any>(`/stats${qs ? `?${qs}` : ""}`);
 }
+
+/* ── Suppliers ── */
+export function getSuppliers(q?: string) {
+  return request<any[]>(`/suppliers${q ? `?q=${encodeURIComponent(q)}` : ""}`);
+}
+export function createSupplier(data: any) {
+  return request<any>("/suppliers", { method: "POST", body: data });
+}
+export function deleteSupplier(id: string) {
+  return request<any>(`/suppliers/${id}`, { method: "DELETE" });
+}
+export function recordPurchase(supplierId: string, data: any) {
+  return request<any>(`/suppliers/${supplierId}/purchases`, { method: "POST", body: data });
+}

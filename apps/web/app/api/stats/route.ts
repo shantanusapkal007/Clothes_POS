@@ -96,10 +96,31 @@ export async function GET(request: NextRequest) {
       };
     });
 
+    // 4. Get Expenses for the same period
+    const expenseWhere: any = { storeId: tenant.storeId };
+    if (dateFrom || dateTo) {
+      expenseWhere.date = {};
+      if (dateFrom) expenseWhere.date.gte = new Date(dateFrom);
+      if (dateTo) {
+        const end = new Date(dateTo);
+        end.setHours(23, 59, 59, 999);
+        expenseWhere.date.lte = end;
+      }
+    }
+    const totalExpenses = await prisma.expense.aggregate({
+      where: expenseWhere,
+      _sum: { amount: true }
+    });
+
     // Sort by revenue descending by default
     data.sort((a, b) => b.revenue - a.revenue);
 
-    return NextResponse.json(data);
+    return NextResponse.json({
+      items: data,
+      summary: {
+        totalExpenses: Number(totalExpenses._sum.amount || 0)
+      }
+    });
   } catch (error) {
     console.error("Stats API Error:", error);
     return NextResponse.json(
