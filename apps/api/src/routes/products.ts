@@ -15,13 +15,34 @@ const productSchema = z.object({
 });
 
 const productUpdateSchema = productSchema.partial();
+import type { FastifyRequest, FastifyInstance } from "fastify";
+
 const tenantHeadersSchema = z.object({
-  "x-organization-id": z.string().min(1),
   "x-store-id": z.string().min(1)
 });
 
-function getTenant(headers: unknown) {
-  return tenantHeadersSchema.parse(headers);
+async function getTenant(request: FastifyRequest, fastify: FastifyInstance) {
+  const headers = tenantHeadersSchema.parse(request.headers);
+  const storeId = headers["x-store-id"];
+  const user = request.user;
+
+  if (!user || !user.sub) {
+    throw fastify.httpErrors.unauthorized("Authentication required");
+  }
+
+  const membership = await fastify.prisma.membership.findFirst({
+    where: { userId: user.sub, storeId }
+  });
+
+  if (!membership) {
+    throw fastify.httpErrors.forbidden("User is not a member of this store");
+  }
+
+  return {
+    "x-organization-id": membership.organizationId,
+    "x-store-id": membership.storeId,
+    "x-user-id": membership.userId
+  };
 }
 
 const mapProduct = (product: {
@@ -53,8 +74,10 @@ const mapProduct = (product: {
 });
 
 const productRoutes: FastifyPluginAsync = async (fastify) => {
+  fastify.addHook("onRequest", fastify.authenticate);
+
   fastify.get("/", async (request) => {
-    const tenant = getTenant(request.headers);
+    const tenant = await getTenant(request, fastify);
     const query = z
       .object({
         search: z.string().trim().optional()
@@ -98,7 +121,7 @@ const productRoutes: FastifyPluginAsync = async (fastify) => {
   });
 
   fastify.get("/barcode/:code", async (request, reply) => {
-    const tenant = getTenant(request.headers);
+    const tenant = await getTenant(request, fastify);
     const params = z.object({ code: z.string().min(1) }).parse(request.params);
     const product = await fastify.prisma.product.findFirst({
       where: {
@@ -115,7 +138,7 @@ const productRoutes: FastifyPluginAsync = async (fastify) => {
   });
 
   fastify.post("/", async (request, reply) => {
-    const tenant = getTenant(request.headers);
+    const tenant = await getTenant(request, fastify);
     const body = productSchema.parse(request.body);
     const product = await fastify.prisma.product.create({
       data: {
@@ -137,7 +160,7 @@ const productRoutes: FastifyPluginAsync = async (fastify) => {
   });
 
   fastify.put("/:id", async (request) => {
-    const tenant = getTenant(request.headers);
+    const tenant = await getTenant(request, fastify);
     const params = z.object({ id: z.string().min(1) }).parse(request.params);
     const body = productUpdateSchema.parse(request.body);
     const existing = await fastify.prisma.product.findFirst({
@@ -171,7 +194,7 @@ const productRoutes: FastifyPluginAsync = async (fastify) => {
   });
 
   fastify.delete("/:id", async (request, reply) => {
-    const tenant = getTenant(request.headers);
+    const tenant = await getTenant(request, fastify);
     const params = z.object({ id: z.string().min(1) }).parse(request.params);
     const deleted = await fastify.prisma.product.deleteMany({
       where: {
