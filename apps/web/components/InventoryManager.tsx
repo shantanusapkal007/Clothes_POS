@@ -398,10 +398,30 @@ export function InventoryManager() {
                         <div className="h-12 w-12 shrink-0 overflow-hidden rounded-xl bg-slate-100">
                           <img alt={p.name} src={getProductImage(p.name)} className="h-full w-full object-cover" />
                         </div>
-                        <div className="min-w-0">
-                          <div className="truncate font-serif text-base font-bold text-slate-900">{p.name}</div>
-                          <div className="mt-1 text-[10px] font-black uppercase tracking-widest text-slate-400">
-                            {p.category} • SKU: {p.barcode || p.id.slice(-8)}
+                        <div className="min-w-0 flex-1 flex flex-col gap-1">
+                          <input
+                            className="w-full truncate font-serif text-base font-bold text-slate-900 bg-transparent border-none p-0 focus:ring-0 focus:bg-white rounded px-1 transition-colors"
+                            type="text"
+                            value={p.name}
+                            onChange={(e) => handleUpdateField(p.id, "name", e.target.value)}
+                            placeholder="Product Name"
+                          />
+                          <div className="flex items-center gap-1 text-[10px] font-black uppercase tracking-widest text-slate-400">
+                            <input
+                              className="w-16 bg-transparent border-none p-0 focus:ring-0 focus:bg-white rounded px-1 transition-colors"
+                              type="text"
+                              value={p.category || ""}
+                              onChange={(e) => handleUpdateField(p.id, "category", e.target.value)}
+                              placeholder="Category"
+                            />
+                            <span>• SKU:</span>
+                            <input
+                              className="w-20 bg-transparent border-none p-0 focus:ring-0 focus:bg-white rounded px-1 transition-colors"
+                              type="text"
+                              value={p.barcode || ""}
+                              onChange={(e) => handleUpdateField(p.id, "barcode", e.target.value)}
+                              placeholder={p.id.slice(-8)}
+                            />
                           </div>
                         </div>
                       </div>
