@@ -1,3 +1,4 @@
+import type { Product } from "@prisma/client";
 import { Decimal } from "@prisma/client/runtime/library";
 import { z } from "zod";
 import type { FastifyPluginAsync } from "fastify";
@@ -114,7 +115,7 @@ const billRoutes: FastifyPluginAsync = async (fastify) => {
       }
     });
 
-    const productMap = new Map(products.map((product) => [product.id, product]));
+const productMap = new Map(products.map((product: Product) => [product.id, product]));
 
     for (const item of body.items) {
       const product = productMap.get(item.productId);
@@ -131,7 +132,7 @@ const billRoutes: FastifyPluginAsync = async (fastify) => {
 
     const summary = calculateCheckout(body.items);
 
-    const bill = await fastify.prisma.$transaction(async (tx) => {
+    const bill = await fastify.prisma.$transaction(async (tx: Parameters<Parameters<typeof fastify.prisma.$transaction>[0]>[0]) => {
       const createdBill = await tx.bill.create({
         data: {
           organizationId: tenant["x-organization-id"],
