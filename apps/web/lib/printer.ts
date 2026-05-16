@@ -1329,7 +1329,7 @@ export function openBrowserPrintWindow(
 
   const printWindow = window.open("", "PRINT", "height=720,width=480");
   if (!printWindow) {
-    return false;
+    return openIframePrintWindow(html);
   }
 
   printWindow.document.write(html);
