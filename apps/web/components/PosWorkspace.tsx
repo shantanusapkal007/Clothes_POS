@@ -2,13 +2,15 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
+import dynamic from "next/dynamic";
 import { CartPanel, type CheckoutRequest } from "./CartPanel";
-import { CreateProductModal } from "./CreateProductModal";
 import { ProductGrid } from "./ProductGrid";
-import { ScannerPanel } from "./ScannerPanel";
-import { BillPrintPreview } from "./BillPrintPreview";
-import { PrinterSettings } from "./PrinterSettings";
 import { checkoutBill, createProduct, getProductByBarcode, getProducts } from "../lib/api";
+
+const CreateProductModal = dynamic(() => import("./CreateProductModal").then(mod => mod.CreateProductModal));
+const ScannerPanel = dynamic(() => import("./ScannerPanel").then(mod => mod.ScannerPanel));
+const BillPrintPreview = dynamic(() => import("./BillPrintPreview").then(mod => mod.BillPrintPreview));
+const PrinterSettings = dynamic(() => import("./PrinterSettings").then(mod => mod.PrinterSettings));
 import { calculateCart } from "../lib/cart-calculations";
 import { useCartStore } from "../lib/cart-store";
 import { parseBarcodeData, type BarcodeData } from "../lib/barcode-parser";
