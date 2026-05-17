@@ -86,3 +86,39 @@ export function openWhatsAppShare(message: string, phone?: string) {
 
   return true;
 }
+
+export async function sharePdfBillOnWhatsApp(
+  pdfBlob: Blob,
+  billNumber: string,
+  message: string
+): Promise<boolean> {
+  if (
+    typeof navigator === "undefined" ||
+    typeof navigator.share !== "function" ||
+    typeof navigator.canShare !== "function"
+  ) {
+    return false;
+  }
+
+  const file = new File([pdfBlob], `Receipt_${billNumber}.pdf`, {
+    type: "application/pdf",
+  });
+
+  const shareData = {
+    title: `Receipt ${billNumber}`,
+    text: message,
+    files: [file],
+  };
+
+  if (!navigator.canShare(shareData)) {
+    return false;
+  }
+
+  try {
+    await navigator.share(shareData);
+    return true;
+  } catch (error) {
+    console.error("Failed to share PDF", error);
+    return false;
+  }
+}

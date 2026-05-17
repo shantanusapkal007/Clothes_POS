@@ -1,14 +1,14 @@
 import { NextRequest, NextResponse } from "next/server";
-import { prisma } from "../../../../lib/prisma";
-import { getTenant } from "../../../../lib/auth-server";
+import { prisma } from "../../../../../lib/prisma";
+import { requireActiveStore } from "../../../../../lib/tenant";
 import { Decimal } from "@prisma/client/runtime/library";
 
-export async function POST(request: NextRequest, { params }: { params: { id: string } }) {
+export async function POST(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
-    const tenant = await getTenant();
+    const tenant = await requireActiveStore();
     if (!tenant) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-    const supplierId = params.id;
+    const { id: supplierId } = await params;
     const body = await request.json();
     const { amount, note } = body;
 
