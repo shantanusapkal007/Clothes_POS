@@ -1,13 +1,17 @@
 "use client";
 
 import { motion } from "framer-motion";
+import { useState } from "react";
 import {
   buildReceiptText,
   getBillLayoutConfig,
   isIosBrowser,
   isShareAvailable,
-  shareReceiptText
+  shareReceiptText,
+  downloadReceiptPdf,
+  generateReceiptPdfBlob
 } from "../lib/printer";
+import { sharePdfBillOnWhatsApp } from "../lib/whatsapp";
 import type { BillDataWithProducts } from "./PosWorkspace";
 
 interface BillPrintPreviewProps {
@@ -62,8 +66,31 @@ export function BillPrintPreview({
     ? "Save & WhatsApp"
     : "Save only";
 
+  const [downloadingPdf, setDownloadingPdf] = useState(false);
+  const [sharingWhatsApp, setSharingWhatsApp] = useState(false);
+
   const handleShare = async () => {
     await shareReceiptText(receiptContent, billNumber);
+  };
+
+  const handleDownloadPdf = async () => {
+    setDownloadingPdf(true);
+    await downloadReceiptPdf(receiptContent, billNumber, layout);
+    setDownloadingPdf(false);
+  };
+
+  const handleWhatsAppPdf = async () => {
+    if (!whatsAppCustomerPhone) return;
+    setSharingWhatsApp(true);
+    const pdfBlob = await generateReceiptPdfBlob(receiptContent, layout);
+    if (pdfBlob) {
+      await sharePdfBillOnWhatsApp(
+        pdfBlob,
+        billNumber,
+        `Hello, here is your receipt ${billNumber}. Thank you for shopping with us!`
+      );
+    }
+    setSharingWhatsApp(false);
   };
 
   return (
@@ -163,24 +190,49 @@ export function BillPrintPreview({
             {confirmPending ? "Processing…" : confirmPrintLabel}
           </button>
 
-          <div className="flex gap-2">
-            {/* Share receipt (iOS + Android) */}
-            {shareAvailable && (
+          <div className="flex flex-col gap-2">
+            <div className="flex gap-2">
               <button
-                onClick={handleShare}
-                disabled={confirmPending}
+                onClick={handleDownloadPdf}
+                disabled={confirmPending || downloadingPdf}
                 className="flex flex-1 items-center justify-center gap-1.5 rounded-lg border border-outline-variant/30 py-2.5 text-xs font-bold text-primary transition active:scale-95"
               >
-                <span className="material-symbols-outlined text-[16px]">share</span>
-                Share
+                <span className="material-symbols-outlined text-[16px]">
+                  {downloadingPdf ? "sync" : "download"}
+                </span>
+                {downloadingPdf ? "PDF..." : "PDF"}
               </button>
-            )}
+
+              {whatsAppCustomerPhone && (
+                <button
+                  onClick={handleWhatsAppPdf}
+                  disabled={confirmPending || sharingWhatsApp}
+                  className="flex flex-1 items-center justify-center gap-1.5 rounded-lg border border-emerald-200 bg-emerald-50 text-emerald-700 py-2.5 text-xs font-bold transition active:scale-95"
+                >
+                  <span className="material-symbols-outlined text-[16px]">
+                    {sharingWhatsApp ? "sync" : "chat"}
+                  </span>
+                  {sharingWhatsApp ? "Sending..." : "PDF to WA"}
+                </button>
+              )}
+
+              {shareAvailable && !whatsAppCustomerPhone && (
+                <button
+                  onClick={handleShare}
+                  disabled={confirmPending}
+                  className="flex flex-1 items-center justify-center gap-1.5 rounded-lg border border-outline-variant/30 py-2.5 text-xs font-bold text-primary transition active:scale-95"
+                >
+                  <span className="material-symbols-outlined text-[16px]">share</span>
+                  Share
+                </button>
+              )}
+            </div>
 
             {/* Save without printing */}
             <button
               onClick={() => onConfirmCheckout(false)}
               disabled={confirmPending}
-              className="flex flex-1 items-center justify-center gap-1.5 rounded-lg border border-outline-variant/30 py-2.5 text-xs font-bold text-on-secondary-container transition active:scale-95"
+              className="flex w-full items-center justify-center gap-1.5 rounded-lg border border-outline-variant/30 py-2.5 text-xs font-bold text-on-secondary-container transition active:scale-95"
             >
               {confirmSaveLabel}
             </button>

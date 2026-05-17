@@ -1281,6 +1281,92 @@ export function isShareAvailable(): boolean {
  * On iOS this opens the native share sheet where the user can AirPrint,
  * copy to Notes, send via Messages/WhatsApp, etc.
  */
+import jsPDF from "jspdf";
+import html2canvas from "html2canvas";
+
+export async function generateReceiptPdfBlob(
+  content: string,
+  layout: BillLayoutConfig = getBillLayoutConfig()
+): Promise<Blob | null> {
+  if (typeof document === "undefined") {
+    return null;
+  }
+
+  const pageWidth =
+    layout.paperWidth <= 58
+      ? "58mm"
+      : layout.paperWidth >= 110
+        ? "110mm"
+        : "80mm";
+  const fontSize =
+    layout.fontSize === "small"
+      ? "10px"
+      : layout.fontSize === "large"
+        ? "13px"
+        : "11px";
+
+  const html = buildPrintDocument(content, pageWidth, fontSize);
+  const container = document.createElement("div");
+  container.innerHTML = html;
+
+  // Style the container so it renders at a reasonable size but hidden from view
+  container.style.position = "absolute";
+  container.style.left = "-9999px";
+  container.style.top = "-9999px";
+  container.style.width = pageWidth;
+
+  document.body.appendChild(container);
+
+  try {
+    const canvas = await html2canvas(container, {
+      scale: 2,
+      useCORS: true,
+      logging: false,
+    });
+
+    const imgData = canvas.toDataURL("image/png");
+
+    // Calculate PDF dimensions (in mm) based on canvas ratio and paper width
+    const pdfWidth = layout.paperWidth;
+    const pdfHeight = (canvas.height * pdfWidth) / canvas.width;
+
+    const pdf = new jsPDF({
+      orientation: "portrait",
+      unit: "mm",
+      format: [pdfWidth, pdfHeight]
+    });
+
+    pdf.addImage(imgData, "PNG", 0, 0, pdfWidth, pdfHeight);
+    return pdf.output("blob");
+  } catch (error) {
+    console.error("Failed to generate PDF", error);
+    return null;
+  } finally {
+    document.body.removeChild(container);
+  }
+}
+
+export async function downloadReceiptPdf(
+  content: string,
+  billNumber: string,
+  layout: BillLayoutConfig = getBillLayoutConfig()
+): Promise<boolean> {
+  const blob = await generateReceiptPdfBlob(content, layout);
+  if (!blob) {
+    return false;
+  }
+
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = `Receipt_${billNumber}.pdf`;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+  return true;
+}
+
 export async function shareReceiptText(
   content: string,
   billNumber: string,

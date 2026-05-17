@@ -21,7 +21,7 @@ function parseDatabaseUrl(rawUrl: string) {
     }
 
     if (!url.searchParams.has("connection_limit")) {
-      url.searchParams.set("connection_limit", "1");
+      url.searchParams.set("connection_limit", "5");
     }
   }
 

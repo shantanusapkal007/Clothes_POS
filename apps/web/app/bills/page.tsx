@@ -8,8 +8,11 @@ import {
   getBillLayoutConfig,
   getPrinterConfig,
   printReceipt,
+  downloadReceiptPdf,
+  generateReceiptPdfBlob,
   type PrintableBillData,
 } from "../../lib/printer";
+import { sharePdfBillOnWhatsApp } from "../../lib/whatsapp";
 import type { BillResponse } from "../../types";
 
 type DateFilter = "today" | "week" | "month" | "all";
@@ -125,6 +128,66 @@ export default function BillsPage() {
       setMessage(e instanceof Error ? e.message : "Refund failed");
     } finally {
       setRefunding(false);
+    }
+  };
+
+  const [downloadingPdf, setDownloadingPdf] = useState(false);
+  const [sharingWhatsApp, setSharingWhatsApp] = useState(false);
+
+  const getPrintData = (bill: BillResponse): PrintableBillData => ({
+    items: bill.items.map((i) => ({
+      productName: i.productName,
+      quantity: i.quantity,
+      price: i.price,
+      total: i.total,
+      discountPercent: 0,
+      taxPercent: 0,
+    })),
+    totalAmount: bill.totalAmount,
+    discountAmount: bill.discountAmount,
+    taxAmount: bill.taxAmount,
+    finalAmount: bill.finalAmount,
+    paymentMethod: bill.paymentMethod,
+    createdAt: bill.createdAt,
+  });
+
+  const handleDownloadPdf = async (bill: BillResponse) => {
+    try {
+      setDownloadingPdf(true);
+      const layout = getBillLayoutConfig();
+      const printData = getPrintData(bill);
+      const billNum = bill.id.slice(0, 8).toUpperCase();
+      const content = buildReceiptText(printData, billNum, layout, bill.paymentMethod);
+      await downloadReceiptPdf(content, billNum, layout);
+    } catch {
+      setMessage("Failed to download PDF");
+    } finally {
+      setDownloadingPdf(false);
+    }
+  };
+
+  const handleWhatsAppPdf = async (bill: BillResponse) => {
+    try {
+      setSharingWhatsApp(true);
+      const layout = getBillLayoutConfig();
+      const printData = getPrintData(bill);
+      const billNum = bill.id.slice(0, 8).toUpperCase();
+      const content = buildReceiptText(printData, billNum, layout, bill.paymentMethod);
+
+      const pdfBlob = await generateReceiptPdfBlob(content, layout);
+      if (pdfBlob) {
+        await sharePdfBillOnWhatsApp(
+          pdfBlob,
+          billNum,
+          `Hello${bill.customerName ? ` ${bill.customerName}` : ""}, here is your receipt ${billNum}. Thank you for shopping with us!`
+        );
+      } else {
+        setMessage("Failed to generate PDF for sharing");
+      }
+    } catch {
+      setMessage("Failed to share PDF");
+    } finally {
+      setSharingWhatsApp(false);
     }
   };
 
@@ -486,30 +549,55 @@ export default function BillsPage() {
                 )}
 
                 {/* Action Buttons */}
-                <div className="mx-4 mb-4 flex gap-2">
-                  <button
-                    onClick={() => handleReprint(selectedBill)}
-                    disabled={reprinting}
-                    className="flex flex-1 items-center justify-center gap-1.5 rounded-xl bg-primary py-3 text-sm font-bold text-white transition active:scale-[0.98] disabled:opacity-50"
-                  >
-                    <span className="material-symbols-outlined" style={{ fontSize: 18 }}>
-                      {reprinting ? "sync" : "print"}
-                    </span>
-                    {reprinting ? "Printing…" : "Reprint"}
-                  </button>
-
-                  {selectedBill.status !== "refunded" && (
+                <div className="mx-4 mb-4 flex flex-col gap-2">
+                  <div className="flex gap-2">
                     <button
-                      onClick={() => handleRefund(selectedBill)}
-                      disabled={refunding}
-                      className="flex flex-1 items-center justify-center gap-1.5 rounded-xl border-2 border-red-200 py-3 text-sm font-bold text-red-700 transition active:scale-[0.98] disabled:opacity-50"
+                      onClick={() => handleDownloadPdf(selectedBill)}
+                      disabled={downloadingPdf}
+                      className="flex flex-1 items-center justify-center gap-1.5 rounded-xl border border-outline-variant/30 py-3 text-sm font-bold text-primary transition active:scale-[0.98] disabled:opacity-50"
                     >
                       <span className="material-symbols-outlined" style={{ fontSize: 18 }}>
-                        {refunding ? "sync" : "undo"}
+                        {downloadingPdf ? "sync" : "download"}
                       </span>
-                      {refunding ? "Processing…" : "Refund"}
+                      {downloadingPdf ? "PDF..." : "PDF"}
                     </button>
-                  )}
+
+                    <button
+                      onClick={() => handleWhatsAppPdf(selectedBill)}
+                      disabled={sharingWhatsApp}
+                      className="flex flex-1 items-center justify-center gap-1.5 rounded-xl border border-emerald-200 bg-emerald-50 text-emerald-700 py-3 text-sm font-bold transition active:scale-[0.98] disabled:opacity-50"
+                    >
+                      <span className="material-symbols-outlined" style={{ fontSize: 18 }}>
+                        {sharingWhatsApp ? "sync" : "chat"}
+                      </span>
+                      {sharingWhatsApp ? "Sending..." : "PDF to WA"}
+                    </button>
+                  </div>
+                  <div className="flex gap-2">
+                    <button
+                      onClick={() => handleReprint(selectedBill)}
+                      disabled={reprinting}
+                      className="flex flex-1 items-center justify-center gap-1.5 rounded-xl bg-primary py-3 text-sm font-bold text-white transition active:scale-[0.98] disabled:opacity-50"
+                    >
+                      <span className="material-symbols-outlined" style={{ fontSize: 18 }}>
+                        {reprinting ? "sync" : "print"}
+                      </span>
+                      {reprinting ? "Printing…" : "Reprint"}
+                    </button>
+
+                    {selectedBill.status !== "refunded" && (
+                      <button
+                        onClick={() => handleRefund(selectedBill)}
+                        disabled={refunding}
+                        className="flex flex-1 items-center justify-center gap-1.5 rounded-xl border-2 border-red-200 py-3 text-sm font-bold text-red-700 transition active:scale-[0.98] disabled:opacity-50"
+                      >
+                        <span className="material-symbols-outlined" style={{ fontSize: 18 }}>
+                          {refunding ? "sync" : "undo"}
+                        </span>
+                        {refunding ? "Processing…" : "Refund"}
+                      </button>
+                    )}
+                  </div>
                 </div>
               </motion.div>
             </>
