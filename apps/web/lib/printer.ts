@@ -775,6 +775,7 @@ export async function disconnectSerialPrinter(): Promise<void> {
 export async function sendSerialData(
   data: Uint8Array,
   config?: PrinterConfig,
+  retryCount = 0
 ): Promise<boolean> {
   if (!isSerialAvailable()) {
     return false;
@@ -807,6 +808,9 @@ export async function sendSerialData(
       await disconnectSerialPrinter();
     } catch {
       // Ignore disconnect errors.
+    }
+    if (retryCount === 0) {
+      return sendSerialData(data, config, 1);
     }
     return false;
   }
@@ -1056,7 +1060,12 @@ export async function connectBluetoothPrinter(config?: PrinterConfig) {
 export async function sendBluetoothData(
   data: Uint8Array,
   config?: PrinterConfig,
+  retryCount = 0
 ): Promise<boolean> {
+  if (bluetoothDevice && bluetoothDevice.gatt && !bluetoothDevice.gatt.connected) {
+    bluetoothCharacteristic = null;
+  }
+
   if (!bluetoothCharacteristic) {
     const characteristic = await connectBluetoothPrinter(config);
     if (!characteristic) {
@@ -1077,6 +1086,10 @@ export async function sendBluetoothData(
     }
     return true;
   } catch {
+    bluetoothCharacteristic = null;
+    if (retryCount === 0) {
+      return sendBluetoothData(data, config, 1);
+    }
     return false;
   }
 }
