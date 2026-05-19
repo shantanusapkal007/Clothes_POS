@@ -11,6 +11,7 @@ const NAV_ITEMS = [
   { name: "Reports", href: "/reports", icon: "analytics" },
   { name: "Khata", href: "/khata", icon: "account_balance_wallet" },
   { name: "Inventory", href: "/inventory", icon: "inventory_2" },
+  { name: "Expenses", href: "/expenses", icon: "receipt_long" },
   { name: "Settings", href: "/settings", icon: "settings" },
 ];
 

@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import { motion } from "framer-motion";
 import {
   buildReceiptText,
@@ -8,6 +9,7 @@ import {
   isShareAvailable,
   shareReceiptText
 } from "../lib/printer";
+import { generatePDFBill, sharePDF, downloadPDF } from "../lib/pdf-generator";
 import type { BillDataWithProducts } from "./PosWorkspace";
 
 interface BillPrintPreviewProps {
@@ -62,8 +64,31 @@ export function BillPrintPreview({
     ? "Save & WhatsApp"
     : "Save only";
 
+  const [pdfError, setPdfError] = useState<string | null>(null);
+
   const handleShare = async () => {
     await shareReceiptText(receiptContent, billNumber);
+  };
+
+  const handlePdfAction = async (action: "download" | "share") => {
+    try {
+      setPdfError(null);
+      const pdfBlob = await generatePDFBill(bill, billNumber, layout, paymentMethod);
+      const filename = `Bill_${billNumber}.pdf`;
+      
+      if (action === "share") {
+        const shared = await sharePDF(pdfBlob, filename);
+        if (!shared) {
+          // Fallback if sharing is not supported/failed
+          downloadPDF(pdfBlob, filename);
+        }
+      } else {
+        downloadPDF(pdfBlob, filename);
+      }
+    } catch (err) {
+      console.error(err);
+      setPdfError("Failed to generate PDF. Please try again.");
+    }
   };
 
   return (
@@ -149,6 +174,13 @@ export function BillPrintPreview({
 
         {/* Action Buttons — sticky bottom */}
         <div className="shrink-0 space-y-2 border-t border-outline-variant/30 bg-white p-3 pb-safe sm:p-4">
+          
+          {pdfError && (
+            <div className="mb-2 rounded-lg bg-red-50 p-2 text-center text-xs font-medium text-red-600">
+              {pdfError}
+            </div>
+          )}
+
           {/* Primary: Print & Confirm */}
           <button
             onClick={() => onConfirmCheckout(true)}
@@ -164,17 +196,15 @@ export function BillPrintPreview({
           </button>
 
           <div className="flex gap-2">
-            {/* Share receipt (iOS + Android) */}
-            {shareAvailable && (
-              <button
-                onClick={handleShare}
-                disabled={confirmPending}
-                className="flex flex-1 items-center justify-center gap-1.5 rounded-lg border border-outline-variant/30 py-2.5 text-xs font-bold text-primary transition active:scale-95"
-              >
-                <span className="material-symbols-outlined text-[16px]">share</span>
-                Share
-              </button>
-            )}
+            {/* Share PDF or Text */}
+            <button
+              onClick={() => handlePdfAction(isShareAvailable() ? "share" : "download")}
+              disabled={confirmPending}
+              className="flex flex-1 items-center justify-center gap-1.5 rounded-lg border border-outline-variant/30 py-2.5 text-xs font-bold text-primary transition active:scale-95"
+            >
+              <span className="material-symbols-outlined text-[16px]">picture_as_pdf</span>
+              {isShareAvailable() ? "Share PDF" : "Download PDF"}
+            </button>
 
             {/* Save without printing */}
             <button

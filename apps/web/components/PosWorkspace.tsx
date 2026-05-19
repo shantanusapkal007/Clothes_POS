@@ -22,6 +22,7 @@ import {
 } from "../lib/printer";
 import { buildWhatsAppBillMessage, openWhatsAppShare } from "../lib/whatsapp";
 import { useStoreName } from "../lib/store-settings";
+import { generatePDFBill, sharePDF, downloadPDF } from "../lib/pdf-generator";
 import type { Product } from "../types";
 
 import { ProductSkeleton } from "./Skeleton";
@@ -314,16 +315,45 @@ export function PosWorkspace() {
       }
 
       if (pendingWhatsApp.sendWhatsApp && pendingWhatsApp.customerPhone && savedPrintableBill) {
-        const whatsAppMessage = buildWhatsAppBillMessage(
-          savedPrintableBill,
-          savedBillNumber,
-          billLayout,
-          selectedPaymentMethod
-        );
-        const opened = openWhatsAppShare(whatsAppMessage, pendingWhatsApp.customerPhone);
-        nextMessage = opened
-          ? `${nextMessage}. WhatsApp opened.`
-          : `${nextMessage}. WhatsApp ready.`;
+        // Automatically generate PDF for WhatsApp
+        try {
+          const pdfBlob = await generatePDFBill(
+            savedPrintableBill,
+            savedBillNumber,
+            billLayout,
+            selectedPaymentMethod
+          );
+          const pdfFilename = `Bill_${savedBillNumber}.pdf`;
+          
+          if (navigator.canShare && navigator.canShare({ files: [new File([pdfBlob], pdfFilename, { type: "application/pdf" })] })) {
+            // Share the PDF directly if supported (mobile)
+            await sharePDF(pdfBlob, pdfFilename);
+            nextMessage = `${nextMessage}. PDF shared via native dialog.`;
+          } else {
+            // Download the PDF and open text WhatsApp link (desktop)
+            downloadPDF(pdfBlob, pdfFilename);
+            const whatsAppMessage = buildWhatsAppBillMessage(
+              savedPrintableBill,
+              savedBillNumber,
+              billLayout,
+              selectedPaymentMethod
+            );
+            const opened = openWhatsAppShare(whatsAppMessage, pendingWhatsApp.customerPhone);
+            nextMessage = opened
+              ? `${nextMessage}. WhatsApp opened. Please attach the downloaded PDF.`
+              : `${nextMessage}. WhatsApp ready.`;
+          }
+        } catch (pdfErr) {
+          console.error("PDF generation failed:", pdfErr);
+          // Fallback to pure text message if PDF fails
+          const whatsAppMessage = buildWhatsAppBillMessage(
+            savedPrintableBill,
+            savedBillNumber,
+            billLayout,
+            selectedPaymentMethod
+          );
+          openWhatsAppShare(whatsAppMessage, pendingWhatsApp.customerPhone);
+        }
       }
 
       clearCart();
