@@ -73,7 +73,8 @@ export function BillPrintPreview({
   const handlePdfAction = async (action: "download" | "share") => {
     try {
       setPdfError(null);
-      const pdfBlob = await generatePDFBill(bill, billNumber, layout, paymentMethod);
+      const printableBill = { ...bill, paymentMethod };
+      const pdfBlob = await generatePDFBill(printableBill, billNumber, layout, paymentMethod);
       const filename = `Bill_${billNumber}.pdf`;
       
       if (action === "share") {
