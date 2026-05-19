@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
+import useSWR from "swr";
 
 type Expense = {
   id: string;
@@ -12,9 +13,16 @@ type Expense = {
   createdAt: string;
 };
 
+const fetcher = async (url: string) => {
+  const res = await fetch(url);
+  if (!res.ok) {
+    const d = await res.json();
+    throw new Error(d.message || "Failed to load expenses");
+  }
+  return res.json();
+};
+
 export default function ExpensesPage() {
-  const [expenses, setExpenses] = useState<Expense[]>([]);
-  const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
 
@@ -26,27 +34,23 @@ export default function ExpensesPage() {
 
   const EXPENSE_CATEGORIES = ["Utilities", "Supplies", "Rent", "Salary", "Maintenance", "Marketing", "Other"];
 
-  const loadExpenses = async () => {
-    try {
-      setLoading(true);
-      setError(null);
-      const res = await fetch("/api/expenses");
-      if (!res.ok) {
-        const d = await res.json();
-        throw new Error(d.message || "Failed to load expenses");
-      }
-      const data = await res.json();
-      setExpenses(data);
-    } catch (err: any) {
-      setError(err.message || "Failed to connect to API");
-    } finally {
-      setLoading(false);
+  const { data: expensesData, error: swrError, isLoading, mutate } = useSWR<Expense[]>(
+    "/api/expenses",
+    fetcher,
+    {
+      revalidateOnFocus: true,
+      dedupingInterval: 5000,
     }
-  };
+  );
+
+  const expenses = expensesData || [];
+  const loading = isLoading;
 
   useEffect(() => {
-    loadExpenses();
-  }, []);
+    if (swrError) {
+      setError(swrError.message);
+    }
+  }, [swrError]);
 
   useEffect(() => {
     if (!message) return;
@@ -81,7 +85,7 @@ export default function ExpensesPage() {
       }
 
       const newExpense = await res.json();
-      setExpenses([newExpense, ...expenses]);
+      void mutate([newExpense, ...expenses], { revalidate: true });
       setAmount("");
       setDescription("");
       setMessage("Expense added successfully");
@@ -102,14 +106,14 @@ export default function ExpensesPage() {
         const d = await res.json();
         throw new Error(d.message || "Failed to delete expense");
       }
-      setExpenses(expenses.filter(e => e.id !== id));
+      void mutate(expenses.filter(e => e.id !== id), { revalidate: true });
       setMessage("Expense deleted");
     } catch (err: any) {
       setError(err.message || "Failed to delete expense");
     }
   };
 
-  const totalExpenses = expenses.reduce((sum, e) => sum + e.amount, 0);
+  const totalExpenses = expenses.reduce((sum, e) => sum + Number(e.amount), 0);
 
   return (
     <div className="main-content">
@@ -225,7 +229,7 @@ export default function ExpensesPage() {
           <div className="glass-panel p-4 rounded-xl min-h-[400px]">
             <div className="flex items-center justify-between mb-4">
               <h2 className="text-lg font-bold text-on-surface">Recent Expenses</h2>
-              <button onClick={loadExpenses} className="text-primary hover:bg-surface-container-high p-1 rounded-md transition-colors" title="Refresh">
+              <button onClick={() => mutate()} className="text-primary hover:bg-surface-container-high p-1 rounded-md transition-colors" title="Refresh">
                 <span className="material-symbols-outlined">refresh</span>
               </button>
             </div>

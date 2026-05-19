@@ -87,6 +87,7 @@ model Product {
   @@index([name])
   @@index([organizationId])
   @@index([storeId])
+  @@index([storeId, name])
   @@map("products")
 }
 
@@ -116,6 +117,7 @@ model Bill {
   @@index([organizationId])
   @@index([storeId])
   @@index([createdAt])
+  @@index([storeId, createdAt(sort: Desc)])
   @@map("bills")
 }
 
@@ -205,6 +207,7 @@ model Expense {
 
   @@index([storeId])
   @@index([date])
+  @@index([storeId, date(sort: Desc)])
   @@map("expenses")
 }
 

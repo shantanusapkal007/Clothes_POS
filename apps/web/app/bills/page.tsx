@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
+import useSWR from "swr";
 import { getBills, refundBill, type BillsListResponse } from "../../lib/api";
 import {
   buildReceiptText,
@@ -70,9 +71,6 @@ function paymentIcon(method: string) {
 }
 
 export default function BillsPage() {
-  const [data, setData] = useState<BillsListResponse | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
   const [search, setSearch] = useState("");
   const [dateFilter, setDateFilter] = useState<DateFilter>("today");
   const [page, setPage] = useState(1);
@@ -81,28 +79,26 @@ export default function BillsPage() {
   const [message, setMessage] = useState<string | null>(null);
   const [reprinting, setReprinting] = useState(false);
 
-  const loadBills = useCallback(async () => {
-    try {
-      setLoading(true);
-      setError(null);
-      const range = getDateRange(dateFilter);
-      const result = await getBills({
+  const range = useMemo(() => getDateRange(dateFilter), [dateFilter]);
+  const swrKey = `/api/bills?page=${page}&search=${search.trim()}&from=${range.from || ""}`;
+
+  const { data, error: swrError, isLoading, mutate } = useSWR<BillsListResponse>(
+    swrKey,
+    () =>
+      getBills({
         page,
         limit: 20,
         search: search.trim() || undefined,
         ...range,
-      });
-      setData(result);
-    } catch (e) {
-      setError(e instanceof Error ? e.message : "Failed to load bills");
-    } finally {
-      setLoading(false);
+      }),
+    {
+      revalidateOnFocus: true,
+      dedupingInterval: 5000,
     }
-  }, [page, search, dateFilter]);
+  );
 
-  useEffect(() => {
-    void loadBills();
-  }, [loadBills]);
+  const loading = isLoading;
+  const error = swrError ? (swrError instanceof Error ? swrError.message : "Failed to load bills") : null;
 
   useEffect(() => {
     if (!message) return;
@@ -120,7 +116,7 @@ export default function BillsPage() {
       const updated = await refundBill(bill.id, reason || undefined);
       setSelectedBill(updated);
       setMessage("Bill refunded — stock restored");
-      await loadBills();
+      void mutate();
     } catch (e) {
       setMessage(e instanceof Error ? e.message : "Refund failed");
     } finally {
@@ -277,7 +273,7 @@ export default function BillsPage() {
           <div className="rounded-xl border border-red-200 bg-red-50 p-4 text-center">
             <p className="text-sm font-medium text-red-800">{error}</p>
             <button
-              onClick={() => void loadBills()}
+              onClick={() => void mutate()}
               className="mt-2 rounded-lg bg-red-100 px-3 py-1.5 text-xs font-bold text-red-700"
             >
               Retry

@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState, useRef } from "react";
+import useSWR from "swr";
 import { type Product } from "../types";
 import { createProduct, deleteProduct, getProducts, updateProduct } from "../lib/api";
 import { InventorySkeleton } from "./Skeleton";
@@ -31,9 +32,7 @@ const DEFAULT_FORM: FormState = {
 };
 
 export function InventoryManager() {
-  const [products, setProducts] = useState<Product[]>([]);
   const [form, setForm] = useState<FormState>(DEFAULT_FORM);
-  const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
   const [filterLowStock, setFilterLowStock] = useState(false);
   const [message, setMessage] = useState<{ Text: string; Type: "success" | "error" } | null>(null);
@@ -41,21 +40,17 @@ export function InventoryManager() {
   const [barcodeToPrint, setBarcodeToPrint] = useState<Product | null>(null);
   const printRef = useRef<HTMLDivElement>(null);
 
-  const loadProducts = async () => {
-    try {
-      setLoading(true);
-      const data = await getProducts();
-      setProducts(data.items);
-    } catch {
-      showMessage("Failed to load inventory", "error");
-    } finally {
-      setLoading(false);
+  const { data, error, isLoading, mutate } = useSWR(
+    "/api/products",
+    () => getProducts(),
+    {
+      revalidateOnFocus: true,
+      dedupingInterval: 5000,
     }
-  };
+  );
 
-  useEffect(() => {
-    void loadProducts();
-  }, []);
+  const products = data?.items || [];
+  const loading = isLoading;
 
   const showMessage = (msg: string, type: "success" | "error" = "success") => {
     setMessage({ Text: msg, Type: type });
@@ -71,7 +66,13 @@ export function InventoryManager() {
 
     try {
       const newProduct = await createProduct(form);
-      setProducts([newProduct, ...products]);
+      void mutate(
+        {
+          items: [newProduct, ...products],
+          totalCount: (data?.totalCount || 0) + 1,
+        },
+        { revalidate: true }
+      );
       setForm(DEFAULT_FORM);
       showMessage("Product added to stock");
     } catch {
@@ -84,7 +85,13 @@ export function InventoryManager() {
 
     try {
       await deleteProduct(id);
-      setProducts(products.filter((p) => p.id !== id));
+      void mutate(
+        {
+          items: products.filter((p) => p.id !== id),
+          totalCount: (data?.totalCount || 0) - 1,
+        },
+        { revalidate: true }
+      );
       showMessage("Product deleted");
     } catch {
       showMessage("Failed to delete product", "error");
@@ -94,7 +101,13 @@ export function InventoryManager() {
   const handleUpdateField = async (id: string, field: keyof Product, value: number | string) => {
     try {
       await updateProduct(id, { [field]: value });
-      setProducts(products.map((p) => (p.id === id ? { ...p, [field]: value } : p)));
+      void mutate(
+        {
+          items: products.map((p) => (p.id === id ? { ...p, [field]: value } : p)),
+          totalCount: data?.totalCount || 0,
+        },
+        { revalidate: true }
+      );
       showMessage("Updated successfully");
     } catch {
       showMessage("Failed to update", "error");
