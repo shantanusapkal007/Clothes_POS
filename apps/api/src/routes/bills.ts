@@ -5,6 +5,8 @@ import { calculateCheckout } from "../lib/billing.js";
 
 const checkoutSchema = z.object({
   paymentMethod: z.string().min(1),
+  billDiscountPercent: z.coerce.number().min(0).max(100).optional().default(0),
+  billManualDiscountAmount: z.coerce.number().min(0).optional().default(0),
   items: z
     .array(
       z.object({
@@ -16,7 +18,9 @@ const checkoutSchema = z.object({
         taxPercent: z.coerce.number().min(0)
       })
     )
-    .min(1)
+    .min(1),
+  customerName: z.string().optional(),
+  customerPhone: z.string().optional()
 });
 const tenantHeadersSchema = z.object({
   "x-organization-id": z.string().min(1),
@@ -36,6 +40,10 @@ const mapBill = (bill: {
   finalAmount: Decimal;
   paymentMethod: string;
   createdAt: Date;
+  customerName?: string | null;
+  customerPhone?: string | null;
+  billDiscountPercent?: Decimal;
+  billManualDiscountAmount?: Decimal;
   items?: Array<{
     id: string;
     productId: string;
@@ -54,6 +62,10 @@ const mapBill = (bill: {
   finalAmount: Number(bill.finalAmount),
   paymentMethod: bill.paymentMethod,
   createdAt: bill.createdAt,
+  customerName: bill.customerName ?? undefined,
+  customerPhone: bill.customerPhone ?? undefined,
+  billDiscountPercent: bill.billDiscountPercent ? Number(bill.billDiscountPercent) : 0,
+  billManualDiscountAmount: bill.billManualDiscountAmount ? Number(bill.billManualDiscountAmount) : 0,
   items:
     bill.items?.map((item) => ({
       id: item.id,
@@ -129,7 +141,11 @@ const billRoutes: FastifyPluginAsync = async (fastify) => {
       }
     }
 
-    const summary = calculateCheckout(body.items);
+    const summary = calculateCheckout(
+      body.items,
+      body.billDiscountPercent,
+      body.billManualDiscountAmount
+    );
 
     const bill = await fastify.prisma.$transaction(async (tx) => {
       const createdBill = await tx.bill.create({
@@ -141,9 +157,62 @@ const billRoutes: FastifyPluginAsync = async (fastify) => {
           discountAmount: new Decimal(summary.discountAmount),
           taxAmount: new Decimal(summary.taxAmount),
           finalAmount: new Decimal(summary.finalAmount),
-          paymentMethod: body.paymentMethod
+          billDiscountPercent: new Decimal(body.billDiscountPercent ?? 0),
+          billManualDiscountAmount: new Decimal(body.billManualDiscountAmount ?? 0),
+          paymentMethod: body.paymentMethod,
+          customerName: body.customerName ?? null,
+          customerPhone: body.customerPhone ?? null
         }
       });
+
+      // Seamless Khata Integration
+      if (body.paymentMethod === "credit" && body.customerPhone) {
+        // Find or create customer
+        let customer = await tx.customer.findUnique({
+          where: {
+            storeId_phone: {
+              storeId: tenant["x-store-id"],
+              phone: body.customerPhone
+            }
+          }
+        });
+
+        if (!customer && body.customerName) {
+          customer = await tx.customer.create({
+            data: {
+              organizationId: tenant["x-organization-id"],
+              storeId: tenant["x-store-id"],
+              name: body.customerName,
+              phone: body.customerPhone,
+              balance: 0
+            }
+          });
+        }
+
+        if (customer) {
+          // Update balance
+          await tx.customer.update({
+            where: { id: customer.id },
+            data: {
+              balance: {
+                increment: new Decimal(summary.finalAmount)
+              }
+            }
+          });
+
+          // Create ledger entry
+          await tx.ledgerEntry.create({
+            data: {
+              organizationId: tenant["x-organization-id"],
+              storeId: tenant["x-store-id"],
+              customerId: customer.id,
+              amount: new Decimal(summary.finalAmount),
+              type: "credit",
+              note: `Bill #${createdBill.id.slice(-6).toUpperCase()}`
+            }
+          });
+        }
+      }
 
       for (const item of summary.items) {
         const product = productMap.get(item.productId)!;

@@ -7,19 +7,15 @@
 }
 
 @layer base {
-  html {
-    -webkit-text-size-adjust: 100%;
-    -webkit-touch-callout: none;
-    overflow-x: hidden;
-  }
-
   body {
     @apply bg-background text-on-background min-h-screen selection:bg-primary-fixed antialiased;
-    background-color: #fafafa;
+    background-color: #f8fafc;
     background-image:
-      linear-gradient(rgba(159, 18, 57, 0.045) 1px, transparent 1px),
-      linear-gradient(90deg, rgba(15, 118, 110, 0.04) 1px, transparent 1px);
-    background-size: 32px 32px;
+      radial-gradient(at 0% 0%, rgba(99, 102, 241, 0.04) 0px, transparent 50%),
+      radial-gradient(at 100% 100%, rgba(124, 58, 237, 0.035) 0px, transparent 50%),
+      linear-gradient(rgba(99, 102, 241, 0.015) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(13, 148, 136, 0.012) 1px, transparent 1px);
+    background-size: 100% 100%, 100% 100%, 32px 32px, 32px 32px;
     background-attachment: fixed;
     -webkit-tap-highlight-color: transparent;
     overflow-x: hidden;
@@ -37,14 +33,14 @@
   input:not([type="checkbox"]):not([type="radio"]),
   select,
   textarea {
-    color: #141515;
-    caret-color: #9f1239;
+    color: #0f172a;
+    caret-color: #6366f1;
     font-size: 16px !important;
   }
 
   input::placeholder,
   textarea::placeholder {
-    color: rgba(63, 74, 69, 0.62);
+    color: rgba(71, 85, 105, 0.5);
     opacity: 1;
   }
 
@@ -64,6 +60,11 @@
   50% { transform: scale(1.08); }
 }
 
+@keyframes low-stock-pulse {
+  0%, 100% { transform: scale(1); box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.4); }
+  50% { transform: scale(1.05); box-shadow: 0 0 0 6px rgba(239, 68, 68, 0); }
+}
+
 @keyframes slide-up {
   from { transform: translateY(100%); opacity: 0; }
   to { transform: translateY(0); opacity: 1; }
@@ -79,12 +80,12 @@
   .app-shell {
     @apply flex min-h-screen flex-col bg-background;
     /* Mobile: bottom tab bar + safe area */
-    padding-bottom: calc(3.5rem + env(safe-area-inset-bottom, 0px));
+    padding-bottom: calc(3.75rem + env(safe-area-inset-bottom, 0px));
   }
 
   .main-content {
     @apply flex flex-1 flex-col min-w-0;
-    transition: margin-left 0.3s ease;
+    transition: margin-left 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   }
 
   /* Desktop layout adjustment */
@@ -99,25 +100,25 @@
   }
 
   .pos-shell {
-    @apply flex flex-1 flex-col overflow-hidden bg-white;
+    @apply flex flex-1 flex-col overflow-hidden bg-slate-50/50;
     /* On mobile, pos-shell should fill the screen minus the bottom tab bar */
-    height: calc(100dvh - 3.5rem - env(safe-area-inset-bottom, 0px));
+    height: calc(100dvh - 3.75rem - env(safe-area-inset-bottom, 0px));
   }
 
   /* Adjust when global top bar is present (on other pages) */
   .has-top-bar .app-shell {
-    padding-top: 3rem;
+    padding-top: 3.5rem;
   }
   
   .has-top-bar .pos-shell {
-    height: calc(100dvh - 6.5rem - env(safe-area-inset-bottom, 0px));
+    height: calc(100dvh - 6.75rem - env(safe-area-inset-bottom, 0px));
   }
 
   @media (min-width: 768px) {
     .pos-shell {
-      height: calc(100dvh - 2rem);
-      margin: 1rem;
-      @apply rounded-xl border border-outline-variant/35 shadow-[0_4px_24px_rgba(31,26,27,0.06)];
+      height: calc(100dvh - 2.5rem);
+      margin: 1.25rem;
+      @apply rounded-xl border border-slate-200/60 shadow-[0_12px_40px_rgba(15,23,42,0.045)];
     }
   }
 
@@ -127,7 +128,7 @@
   }
 
   .ops-card {
-    @apply rounded-lg border border-outline-variant/40 bg-white px-3 py-2.5 shadow-sm transition hover:bg-white md:px-4 md:py-3;
+    @apply rounded-lg border border-slate-200/50 bg-white px-3 py-2.5 shadow-sm transition hover:bg-white md:px-4 md:py-3;
   }
 
   .ops-card strong {
@@ -157,20 +158,20 @@
 
   /* ─── Mobile Tab Switcher ─── */
   .mobile-tab-bar {
-    @apply flex w-full gap-1 rounded-xl bg-surface-container-high p-1;
+    @apply flex w-full gap-1.5 rounded-xl bg-slate-200/50 p-1 backdrop-blur-md;
   }
 
   .mobile-tab {
-    @apply flex-1 flex items-center justify-center gap-2 rounded-lg py-3 px-2 text-xs font-bold uppercase tracking-[0.15em] transition-all duration-200 md:py-2.5;
+    @apply flex-1 flex items-center justify-center gap-2 rounded-lg py-3 px-2 text-[10px] sm:text-xs font-bold uppercase tracking-[0.15em] transition-all duration-200 md:py-2.5;
     min-height: 48px;
   }
 
   .mobile-tab--active {
-    @apply bg-primary text-on-primary shadow-md;
+    @apply bg-white text-primary shadow-sm border border-slate-100;
   }
 
   .mobile-tab--inactive {
-    @apply text-on-secondary-container hover:bg-surface-container-highest;
+    @apply text-slate-500 hover:bg-white/40;
   }
 
   .mobile-tab .material-symbols-outlined {
@@ -179,11 +180,11 @@
 
   /* ─── Floating Cart Badge ─── */
   .floating-cart-badge {
-    @apply fixed z-50 flex items-center gap-2 rounded-full bg-primary px-4 py-3 font-bold text-on-primary shadow-[0_12px_40px_rgba(159,18,57,0.28)] transition-all active:scale-95;
-    bottom: calc(3.75rem + env(safe-area-inset-bottom, 0px));
+    @apply fixed z-50 flex items-center gap-2 rounded-full bg-gradient-to-r from-primary to-violet-600 px-4 py-3 font-bold text-on-primary shadow-[0_12px_40px_rgba(99,102,241,0.35)] transition-all active:scale-95;
+    bottom: calc(4rem + env(safe-area-inset-bottom, 0px));
     right: 1rem;
     left: auto;
-    animation: pulse-badge 2s ease-in-out infinite;
+    animation: pulse-badge 2.5s ease-in-out infinite;
     min-height: 48px;
     min-width: 48px;
   }
@@ -200,7 +201,7 @@
 
   /* ─── Panels ─── */
   .panel {
-    @apply rounded-lg border border-outline-variant/40 bg-white p-3 shadow-[0_20px_60px_rgb(0,0,0,0.04)] md:p-6;
+    @apply rounded-xl border border-slate-200/60 bg-white p-3 shadow-[0_8px_30px_rgba(15,23,42,0.03)] md:p-6;
   }
 
   .panel-heading {
@@ -212,20 +213,20 @@
   }
 
   .eyebrow {
-    @apply mb-1 text-[9px] font-bold uppercase tracking-[0.2em] text-on-secondary-container md:text-[10px] md:tracking-[0.25em];
+    @apply mb-1 text-[9px] font-bold uppercase tracking-[0.2em] text-slate-400 md:text-[10px] md:tracking-[0.25em];
   }
 
   /* ─── Inputs ─── */
   .text-input {
-    @apply w-full rounded-lg border border-outline-variant/70 bg-white px-3 py-3 text-sm font-semibold text-on-surface shadow-[inset_0_1px_0_rgba(255,255,255,0.95),0_8px_18px_rgba(31,26,27,0.05)] transition-all placeholder:text-on-surface-variant/70 focus:border-primary focus:bg-white focus:outline-none focus:ring-4 focus:ring-primary/15 md:px-5 md:py-4 md:text-base;
+    @apply w-full rounded-xl border border-slate-200 bg-white px-3 py-3 text-sm font-semibold text-on-surface shadow-sm transition-all placeholder:text-slate-400/80 focus:border-primary focus:bg-white focus:outline-none focus:ring-4 focus:ring-primary/10 md:px-5 md:py-4 md:text-base;
   }
 
   .field-input {
-    @apply w-full rounded-lg border border-outline-variant/70 bg-white px-3 py-3 text-sm font-semibold text-on-surface shadow-[inset_0_1px_0_rgba(255,255,255,0.95),0_8px_18px_rgba(31,26,27,0.05)] transition-all placeholder:text-on-surface-variant/70 focus:border-primary focus:bg-white focus:outline-none focus:ring-4 focus:ring-primary/15 md:px-5 md:py-4 md:text-base;
+    @apply w-full rounded-xl border border-slate-200 bg-white px-3 py-3 text-sm font-semibold text-on-surface shadow-sm transition-all placeholder:text-slate-400/80 focus:border-primary focus:bg-white focus:outline-none focus:ring-4 focus:ring-primary/10 md:px-5 md:py-4 md:text-base;
   }
 
   .field-input-compact {
-    @apply w-full rounded-md border border-outline-variant/60 bg-white px-2 py-2 text-sm font-bold text-on-surface shadow-sm transition-all focus:border-primary focus:bg-white focus:outline-none focus:ring-2 focus:ring-primary/20;
+    @apply w-full rounded-lg border border-slate-200 bg-white px-2 py-2 text-sm font-bold text-on-surface shadow-sm transition-all focus:border-primary focus:bg-white focus:outline-none focus:ring-2 focus:ring-primary/10;
   }
 
   .panel-options {
@@ -234,7 +235,7 @@
 
   /* ─── Buttons ─── */
   .button {
-    @apply inline-flex items-center justify-center rounded-lg px-4 py-3 text-sm font-semibold tracking-wide transition-all active:scale-[0.96] disabled:cursor-not-allowed disabled:opacity-60;
+    @apply inline-flex items-center justify-center rounded-xl px-4 py-3 text-sm font-semibold tracking-wide transition-all active:scale-[0.96] disabled:cursor-not-allowed disabled:opacity-60;
     min-height: 48px;
     min-width: 48px;
     touch-action: manipulation;
@@ -246,15 +247,15 @@
   }
 
   .button-primary {
-    @apply bg-primary text-on-primary shadow-[0_8px_20px_rgba(159,18,57,0.22)] hover:bg-primary-container hover:shadow-[0_12px_25px_rgba(159,18,57,0.32)];
+    @apply bg-gradient-to-r from-primary to-violet-600 text-on-primary shadow-[0_8px_20px_rgba(99,102,241,0.22)] hover:from-primary-container hover:to-violet-700 hover:shadow-[0_12px_25px_rgba(99,102,241,0.35)];
   }
 
   .button-secondary {
-    @apply border border-white/60 bg-white text-on-surface shadow-[0_4px_12px_rgb(0,0,0,0.02)] hover:border-white hover:bg-white;
+    @apply border border-slate-200 bg-white text-on-surface shadow-sm hover:border-slate-300 hover:bg-slate-50;
   }
 
   .button-ghost {
-    @apply bg-transparent text-on-secondary-container hover:bg-white/40 hover:text-primary;
+    @apply bg-transparent text-slate-500 hover:bg-slate-100 hover:text-primary;
   }
 
   .badge {
@@ -262,15 +263,15 @@
   }
 
   .badge-muted {
-    @apply bg-surface-container-high/60 text-on-secondary-container;
+    @apply bg-slate-100 text-slate-500;
   }
 
   .success-text {
-    @apply mt-3 rounded-lg border border-emerald-200/50 bg-emerald-50 px-3 py-2.5 text-sm text-emerald-800 shadow-[0_8px_30px_rgba(16,185,129,0.08)] md:mt-4 md:px-4 md:py-3;
+    @apply mt-3 rounded-xl border border-emerald-200/50 bg-emerald-50 px-3 py-2.5 text-sm text-emerald-800 shadow-[0_8px_30px_rgba(16,185,129,0.04)] md:mt-4 md:px-4 md:py-3;
   }
 
   .error-card {
-    @apply mt-3 flex flex-col gap-2 rounded-lg border border-error/15 bg-error-container p-3 shadow-[0_8px_30px_rgba(186,26,26,0.08)] sm:flex-row sm:items-center sm:justify-between md:mt-4 md:gap-3 md:p-4;
+    @apply mt-3 flex flex-col gap-2 rounded-xl border border-error/15 bg-error-container p-3 shadow-[0_8px_30px_rgba(239,68,68,0.04)] sm:flex-row sm:items-center sm:justify-between md:mt-4 md:gap-3 md:p-4;
   }
 
   .error-text {
@@ -278,11 +279,11 @@
   }
 
   .modal-backdrop {
-    @apply fixed inset-0 z-[120] flex items-end justify-center bg-black/40 p-0 sm:items-center sm:p-4;
+    @apply fixed inset-0 z-[120] flex items-end justify-center bg-slate-900/40 backdrop-blur-md p-0 sm:items-center sm:p-4;
   }
 
   .modal-card {
-    @apply max-h-[100vh] w-full max-w-2xl overflow-y-auto rounded-t-2xl border-t border-outline-variant/40 bg-white p-4 shadow-[0_40px_100px_rgba(8,47,40,0.18)] sm:max-h-[92vh] sm:rounded-lg sm:border sm:p-6 md:p-8;
+    @apply max-h-[100vh] w-full max-w-2xl overflow-y-auto rounded-t-2xl border-t border-slate-200/60 bg-white p-4 shadow-[0_40px_100px_rgba(15,23,42,0.12)] sm:max-h-[92vh] sm:rounded-xl sm:border sm:p-6 md:p-8;
   }
 
   .inventory-form {
@@ -402,6 +403,10 @@
 
   .material-symbols-outlined {
     font-variation-settings: 'FILL' 0, 'wght' 300, 'GRAD' 0, 'opsz' 24;
+  }
+
+  .low-stock-pulse {
+    animation: low-stock-pulse 2s infinite ease-in-out;
   }
   
   /* Connection status badges for Printer Settings */

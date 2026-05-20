@@ -79,7 +79,9 @@ export function checkoutBill(
   items: CartItem[],
   paymentMethod: string,
   billDiscountPercent: number = 0,
-  billManualDiscountAmount: number = 0
+  billManualDiscountAmount: number = 0,
+  customerName?: string,
+  customerPhone?: string
 ) {
   return request<BillResponse & { summary: unknown }>("/bills", {
     method: "POST",
@@ -87,6 +89,8 @@ export function checkoutBill(
       paymentMethod,
       billDiscountPercent,
       billManualDiscountAmount,
+      customerName,
+      customerPhone,
       items: items.map((item) => ({
         productId: item.productId,
         quantity: item.quantity,

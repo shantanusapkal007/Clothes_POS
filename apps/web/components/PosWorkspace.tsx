@@ -28,6 +28,8 @@ import type { Product } from "../types";
 import { ProductSkeleton } from "./Skeleton";
 
 export type BillDataWithProducts = Omit<ReturnType<typeof calculateCheckout>, "items"> & {
+  customerName?: string;
+  customerPhone?: string;
   items: Array<{
     productName: string;
     productId: string;
@@ -98,6 +100,7 @@ export function PosWorkspace() {
     customerPhone: "",
     sendWhatsApp: false
   });
+  const [pendingCustomerName, setPendingCustomerName] = useState<string>("");
 
   const visibleProducts = useMemo(() => {
     if (!search.trim()) {
@@ -229,12 +232,14 @@ export function PosWorkspace() {
   const handleCheckout = async ({
     paymentMethod,
     customerPhone,
+    customerName,
     sendWhatsApp
   }: CheckoutRequest) => {
     try {
       setCheckoutPending(true);
       setError(null);
       setSelectedPaymentMethod(paymentMethod);
+      setPendingCustomerName(customerName || "");
       setPendingWhatsApp({
         customerPhone,
         sendWhatsApp
@@ -257,6 +262,8 @@ export function PosWorkspace() {
 
       setBillData({
         ...summary,
+        customerName: customerName || undefined,
+        customerPhone: customerPhone || undefined,
         items: billItems
       });
       setPreviewBillNumber(createPreviewBillNumber());
@@ -284,7 +291,9 @@ export function PosWorkspace() {
         items,
         selectedPaymentMethod,
         billDiscountPercent,
-        billManualDiscountAmount
+        billManualDiscountAmount,
+        pendingCustomerName || undefined,
+        pendingWhatsApp.customerPhone || undefined
       );
       const savedBillNumber = result.id.slice(0, 8).toUpperCase();
       const billLayout = getBillLayoutConfig();
@@ -360,6 +369,7 @@ export function PosWorkspace() {
       setBillPreviewOpen(false);
       setBillData(null);
       setPreviewBillNumber("");
+      setPendingCustomerName("");
       setPendingWhatsApp({ customerPhone: "", sendWhatsApp: false });
       setMobileView("products");
       setMessage(nextMessage);

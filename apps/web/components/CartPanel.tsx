@@ -1,9 +1,10 @@
 "use client";
 
 import { AnimatePresence, motion } from "framer-motion";
-import { useMemo, useState } from "react";
+import { useMemo, useState, useEffect } from "react";
 import { calculateCart } from "../lib/cart-calculations";
 import { useCartStore } from "../lib/cart-store";
+import { getCustomers, type CustomerResponse } from "../lib/api";
 
 export type CheckoutRequest = {
   paymentMethod: string;
@@ -45,6 +46,58 @@ export function CartPanel({
   const [customerPhone, setCustomerPhone] = useState("");
   const [customerName, setCustomerName] = useState("");
   const [sendWhatsApp, setSendWhatsApp] = useState(false);
+
+  // Khata Customer Autocomplete states
+  const [customers, setCustomers] = useState<CustomerResponse[]>([]);
+  const [showSuggestions, setShowSuggestions] = useState(false);
+  const [selectedCustomer, setSelectedCustomer] = useState<CustomerResponse | null>(null);
+
+  // Fetch Khata Customers on mount
+  useEffect(() => {
+    getCustomers()
+      .then((data) => {
+        setCustomers(data || []);
+      })
+      .catch((err) => {
+        console.error("Failed to fetch customers for auto-suggest", err);
+      });
+  }, []);
+
+  // Filter customers based on input Name or Phone
+  const filteredCustomers = useMemo(() => {
+    if (!customerName && !customerPhone) return [];
+    const lowerName = customerName.toLowerCase();
+    return customers.filter((c) => {
+      const nameMatch = c.name.toLowerCase().includes(lowerName);
+      const phoneMatch = c.phone.includes(customerPhone);
+      return nameMatch || phoneMatch;
+    });
+  }, [customers, customerName, customerPhone]);
+
+  // Resolve matching customer from typed values to update balance alert
+  useEffect(() => {
+    const match = customers.find(
+      (c) =>
+        c.phone === customerPhone ||
+        (c.name.toLowerCase() === customerName.toLowerCase() && customerName !== "")
+    );
+    setSelectedCustomer(match || null);
+  }, [customerPhone, customerName, customers]);
+
+  const handleSelectCustomer = (c: CustomerResponse) => {
+    setCustomerName(c.name);
+    setCustomerPhone(c.phone);
+    setSelectedCustomer(c);
+    setShowSuggestions(false);
+    
+    // Automatically enable whatsapp billing if a valid 10+ digit number is present
+    const normalized = c.phone.replace(/[^\d]/g, "");
+    if (normalized.length >= 10) {
+      setSendWhatsApp(true);
+    } else {
+      setSendWhatsApp(false);
+    }
+  };
 
   const handlePhoneChange = (val: string) => {
     setCustomerPhone(val);
@@ -376,25 +429,81 @@ export function CartPanel({
               </div>
             </div>
 
-            <div className="block rounded-lg border border-slate-200 bg-slate-50 p-2 sm:p-3 md:p-4 shadow-sm">
-              <span className="mb-1.5 block text-[8px] sm:text-[9px] md:text-[10px] font-bold uppercase tracking-[0.15em] text-slate-500">
+            <div className="relative block rounded-xl border border-slate-200 bg-slate-50 p-3 shadow-sm">
+              <span className="mb-2 block text-[8px] sm:text-[9px] md:text-[10px] font-bold uppercase tracking-[0.15em] text-slate-500">
                 Customer Information
               </span>
-              <div className="space-y-2">
+              <div className="relative space-y-2">
                 <input
-                  className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs sm:text-sm text-on-surface shadow-sm outline-none transition focus:border-primary focus:ring-4 focus:ring-primary/10"
+                  className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-xs sm:text-sm font-semibold text-on-surface shadow-sm outline-none transition focus:border-primary focus:ring-4 focus:ring-primary/10"
                   placeholder="Customer Name (for Udhar)"
                   value={customerName}
-                  onChange={(e) => setCustomerName(e.target.value)}
+                  onChange={(e) => {
+                    setCustomerName(e.target.value);
+                    setShowSuggestions(true);
+                  }}
+                  onFocus={() => setShowSuggestions(true)}
                 />
                 <input
-                  className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs sm:text-sm text-on-surface shadow-sm outline-none transition focus:border-primary focus:ring-4 focus:ring-primary/10"
+                  className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-xs sm:text-sm font-semibold text-on-surface shadow-sm outline-none transition focus:border-primary focus:ring-4 focus:ring-primary/10"
                   type="tel"
                   placeholder="Phone Number"
                   value={customerPhone}
-                  onChange={(e) => handlePhoneChange(e.target.value)}
+                  onChange={(e) => {
+                    handlePhoneChange(e.target.value);
+                    setShowSuggestions(true);
+                  }}
+                  onFocus={() => setShowSuggestions(true)}
                 />
+
+                {/* Suggestions Autocomplete Dropdown */}
+                {showSuggestions && filteredCustomers.length > 0 && (
+                  <>
+                    <div 
+                      className="fixed inset-0 z-40 bg-transparent" 
+                      onClick={() => setShowSuggestions(false)} 
+                    />
+                    <div className="absolute left-0 right-0 z-50 top-full mt-1.5 max-h-48 overflow-y-auto rounded-xl border border-slate-200/60 bg-white/95 backdrop-blur-xl shadow-lg p-1.5 space-y-0.5 scrollbar-thin">
+                      <div className="px-2 py-1 text-[9px] font-bold uppercase tracking-wider text-slate-400 border-b border-slate-100 flex justify-between items-center">
+                        <span>Suggested Khata Customers</span>
+                        <button 
+                          type="button" 
+                          onClick={() => setShowSuggestions(false)}
+                          className="text-slate-400 hover:text-slate-600 font-bold"
+                        >
+                          ✕
+                        </button>
+                      </div>
+                      {filteredCustomers.map((c) => (
+                        <div
+                          key={c.id}
+                          onClick={() => handleSelectCustomer(c)}
+                          className="flex items-center justify-between rounded-lg px-2.5 py-2 text-xs hover:bg-primary/5 hover:text-primary cursor-pointer transition-all duration-150"
+                        >
+                          <div className="min-w-0 flex-1">
+                            <p className="font-bold truncate text-slate-800">{c.name}</p>
+                            <p className="text-[10px] text-slate-500 font-medium">{c.phone}</p>
+                          </div>
+                          {c.balance > 0 && (
+                            <span className="shrink-0 ml-2 rounded-lg bg-amber-50 px-2 py-0.5 text-[9px] font-extrabold text-amber-700 border border-amber-200/50">
+                              ₹{c.balance.toFixed(0)} Udhar
+                            </span>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  </>
+                )}
               </div>
+
+              {/* Outstanding Balance Banner */}
+              {selectedCustomer && selectedCustomer.balance > 0 && (
+                <div className="mt-2.5 flex items-center gap-2 rounded-xl border border-amber-200/50 bg-amber-50/80 px-3 py-2.5 text-xs font-bold text-amber-800 shadow-sm transition-all duration-200">
+                  <span className="material-symbols-outlined text-amber-700 text-base animate-bounce" style={{ fontVariationSettings: "'FILL' 1" }}>warning</span>
+                  <span>Outstanding Khata Balance: ₹{selectedCustomer.balance.toFixed(2)}</span>
+                </div>
+              )}
+
               <div className="mt-3 flex cursor-pointer items-center gap-2 border-t border-slate-200 pt-3">
                 <input
                   className="rounded border-emerald-300 text-emerald-700 focus:ring-emerald-600"

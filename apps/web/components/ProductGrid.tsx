@@ -78,7 +78,7 @@ function ProductGridComponent({
           >
             {/* Low stock indicator */}
             {lowStock && (
-              <span className="absolute -right-0.5 -top-0.5 flex h-3 w-3 sm:h-3.5 sm:w-3.5 items-center justify-center rounded-full bg-red-500 text-[6px] sm:text-[7px] font-bold text-white ring-2 ring-white">
+              <span className="absolute -right-0.5 -top-0.5 flex h-3 w-3 sm:h-3.5 sm:w-3.5 items-center justify-center rounded-full bg-red-500 text-[6px] sm:text-[7px] font-bold text-white ring-2 ring-white low-stock-pulse">
                 !
               </span>
             )}
