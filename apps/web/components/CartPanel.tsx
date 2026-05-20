@@ -108,7 +108,7 @@ export function CartPanel({
       setSendWhatsApp(false);
     }
   };
-  const [expandedItem, setExpandedItem] = useState<string | null>(null);
+  const [editingItem, setEditingItem] = useState<string | null>(null);
   const summary = calculateCart(items, billDiscountPercent, billManualDiscountAmount);
   const lineMap = useMemo(
     () => new Map(summary.lines.map((line) => [line.productId, line])),
@@ -121,10 +121,6 @@ export function CartPanel({
     `https://ui-avatars.com/api/?name=${encodeURIComponent(
       name
     )}&background=ffe4e6&color=9f1239&size=128&font-size=0.32`;
-
-  const toggleExpand = (productId: string) => {
-    setExpandedItem(expandedItem === productId ? null : productId);
-  };
 
   return (
     <div className="glass-panel flex h-full flex-col rounded-lg p-2 sm:p-4 md:p-6 xl:sticky xl:top-24">
@@ -176,10 +172,6 @@ export function CartPanel({
             <AnimatePresence initial={false}>
               {items.map((item) => {
                 const line = lineMap.get(item.productId);
-                const isExpanded = expandedItem === item.productId;
-                const manualDiscountLimit =
-                  (line?.lineSubtotal ?? item.price * item.quantity) *
-                  (1 - item.discountPercent / 100);
 
                 return (
                   <motion.div
@@ -189,14 +181,14 @@ export function CartPanel({
                     animate={{ opacity: 1, y: 0, scale: 1 }}
                     exit={{ opacity: 0, y: 8, scale: 0.96 }}
                     transition={{ type: "spring", stiffness: 340, damping: 28 }}
-                    className="overflow-hidden rounded-lg border border-outline-variant/30 bg-white/95 shadow-sm"
+                    className="overflow-hidden rounded-xl border border-outline-variant/30 bg-white shadow-sm hover:border-primary/30 transition-colors"
                   >
-                    {/* Compact Row — always visible */}
+                    {/* Compact Row — tap to edit */}
                     <div
-                      className="flex items-center gap-1.5 sm:gap-2 md:gap-3 p-2 sm:p-2.5 md:p-3 cursor-pointer active:bg-surface-container-low/50"
-                      onClick={() => toggleExpand(item.productId)}
+                      className="flex items-center gap-2 p-2.5 sm:p-3 cursor-pointer active:bg-surface-container-low/50 select-none"
+                      onClick={() => setEditingItem(item.productId)}
                     >
-                      <div className="h-9 w-9 sm:h-10 sm:w-10 md:h-14 md:w-14 shrink-0 overflow-hidden rounded-lg bg-surface-container-low ring-1 ring-white/80">
+                      <div className="h-10 w-10 sm:h-12 sm:w-12 shrink-0 overflow-hidden rounded-lg bg-surface-container-low ring-1 ring-white/80">
                         <img
                           alt={item.name}
                           src={getProductImage(item.name)}
@@ -205,21 +197,21 @@ export function CartPanel({
                       </div>
 
                       <div className="min-w-0 flex-1">
-                        <h5 className="truncate text-xs sm:text-sm md:text-base font-semibold text-on-surface">
+                        <h5 className="truncate text-xs sm:text-sm font-extrabold text-on-surface">
                           {item.name}
                         </h5>
-                        <p className="text-[8px] sm:text-[10px] md:text-xs font-bold text-primary">
-                          ₹{item.price.toFixed(0)} x {item.quantity}
+                        <p className="text-[10px] sm:text-xs font-bold text-primary flex items-center gap-1.5 mt-0.5">
+                          ₹{item.price.toFixed(0)} × {item.quantity}
                           {item.discountPercent > 0 && (
-                            <span className="ml-1 text-emerald-700">-{item.discountPercent}%</span>
+                            <span className="rounded bg-emerald-50 px-1 text-[9px] font-black text-emerald-700">-{item.discountPercent}%</span>
                           )}
                         </p>
                       </div>
 
                       {/* Quantity stepper */}
-                      <div className="flex items-center gap-0.5 shrink-0" onClick={(e) => e.stopPropagation()}>
+                      <div className="flex items-center gap-1 shrink-0" onClick={(e) => e.stopPropagation()}>
                         <button
-                          className="cart-item-compact__stepper-btn h-8 w-8 sm:h-9 sm:w-9"
+                          className="cart-item-compact__stepper-btn h-8 w-8 sm:h-9 sm:w-9 flex items-center justify-center rounded-lg bg-slate-100 text-slate-700 active:scale-90"
                           onClick={() => {
                             if (item.quantity <= 1) {
                               removeItem(item.productId);
@@ -234,10 +226,10 @@ export function CartPanel({
                           </span>
                         </button>
 
-                        <span className="cart-item-compact__qty text-xs sm:text-sm">{item.quantity}</span>
+                        <span className="w-6 text-center text-xs sm:text-sm font-extrabold text-on-surface">{item.quantity}</span>
 
                         <button
-                          className="cart-item-compact__stepper-btn h-8 w-8 sm:h-9 sm:w-9"
+                          className="cart-item-compact__stepper-btn h-8 w-8 sm:h-9 sm:w-9 flex items-center justify-center rounded-lg bg-slate-100 text-slate-700 active:scale-90"
                           onClick={() => updateItem(item.productId, "quantity", item.quantity + 1)}
                           type="button"
                         >
@@ -246,151 +238,17 @@ export function CartPanel({
                       </div>
 
                       {/* Line total */}
-                      <div className="cart-item-compact__total text-xs sm:text-sm md:text-base min-w-[50px] sm:min-w-[60px]">
+                      <div className="text-right text-xs sm:text-sm font-black tabular-nums text-on-surface min-w-[50px] sm:min-w-[60px]">
                         ₹{line?.total.toFixed(0) ?? "0"}
                       </div>
 
-                      {/* Expand arrow */}
-                      <span className="material-symbols-outlined text-base sm:text-lg text-on-secondary-container/50 transition-transform duration-200 shrink-0"
-                        style={{ transform: isExpanded ? "rotate(180deg)" : "rotate(0deg)" }}
+                      {/* Edit Icon */}
+                      <span className="material-symbols-outlined text-sm sm:text-base text-primary/70 hover:text-primary transition-colors shrink-0 p-1"
+                        title="Edit price/discount"
                       >
-                        expand_more
+                        edit_note
                       </span>
                     </div>
-
-                    {/* Expanded Details — price, discount, tax editing */}
-                    <AnimatePresence>
-                      {isExpanded && (
-                        <motion.div
-                          initial={{ height: 0, opacity: 0 }}
-                          animate={{ height: "auto", opacity: 1 }}
-                          exit={{ height: 0, opacity: 0 }}
-                          transition={{ duration: 0.2 }}
-                          className="overflow-hidden"
-                        >
-                          <div className="border-t border-outline-variant/20 bg-surface-container-lowest/50 p-2 sm:p-3 space-y-2 sm:space-y-3">
-                            <div className="grid grid-cols-2 gap-1 sm:gap-1.5 md:grid-cols-4 md:gap-2">
-                              <label className="block">
-                                <span className="mb-0.5 sm:mb-1 block text-[8px] sm:text-[9px] md:text-[10px] font-bold uppercase tracking-[0.15em] text-on-secondary-container">
-                                  Price
-                                </span>
-                                <input
-                                  className="field-input-compact text-right tabular-nums text-xs"
-                                  type="number"
-                                  min={0}
-                                  step="0.01"
-                                  value={item.price}
-                                  onChange={(event) =>
-                                    updateItem(
-                                      item.productId,
-                                      "price",
-                                      parseFloat(event.target.value) || 0
-                                    )
-                                  }
-                                />
-                              </label>
-
-                              <label className="block">
-                                <span className="mb-0.5 sm:mb-1 block text-[8px] sm:text-[9px] md:text-[10px] font-bold uppercase tracking-[0.15em] text-on-secondary-container">
-                                  Disc %
-                                </span>
-                                <div className="flex gap-0.5 sm:gap-1">
-                                  <button
-                                    type="button"
-                                    className={`shrink-0 rounded-md px-1 sm:px-2 py-1 sm:py-1.5 text-[8px] sm:text-[9px] font-bold transition ${
-                                      item.discountPercent === 10
-                                        ? "bg-primary text-on-primary"
-                                        : "bg-surface-container-high text-secondary"
-                                    }`}
-                                    onClick={() =>
-                                      updateItem(
-                                        item.productId,
-                                        "discountPercent",
-                                        item.discountPercent === 10 ? 0 : 10
-                                      )
-                                    }
-                                  >
-                                    10%
-                                  </button>
-                                  <input
-                                    className="field-input-compact text-right tabular-nums flex-1 text-xs"
-                                    type="number"
-                                    min={0}
-                                    max={100}
-                                    step="0.01"
-                                    value={item.discountPercent}
-                                    onChange={(event) =>
-                                      updateItem(
-                                        item.productId,
-                                        "discountPercent",
-                                        parseFloat(event.target.value) || 0
-                                      )
-                                    }
-                                  />
-                                </div>
-                              </label>
-
-                              <label className="block">
-                                <span className="mb-0.5 sm:mb-1 block text-[8px] sm:text-[9px] md:text-[10px] font-bold uppercase tracking-[0.15em] text-on-secondary-container">
-                                  Manual ₹
-                                </span>
-                                <input
-                                  className="field-input-compact text-right tabular-nums text-xs"
-                                  type="number"
-                                  min={0}
-                                  max={Math.max(0, manualDiscountLimit)}
-                                  step="0.01"
-                                  value={item.manualDiscountAmount}
-                                  onChange={(event) =>
-                                    updateItem(
-                                      item.productId,
-                                      "manualDiscountAmount",
-                                      parseFloat(event.target.value) || 0
-                                    )
-                                  }
-                                />
-                              </label>
-
-                              <label className="block">
-                                <span className="mb-0.5 sm:mb-1 block text-[8px] sm:text-[9px] md:text-[10px] font-bold uppercase tracking-[0.15em] text-on-secondary-container">
-                                  Tax %
-                                </span>
-                                <input
-                                  className="field-input-compact text-right tabular-nums text-xs"
-                                  type="number"
-                                  min={0}
-                                  max={100}
-                                  step="0.01"
-                                  value={item.taxPercent}
-                                  onChange={(event) =>
-                                    updateItem(
-                                      item.productId,
-                                      "taxPercent",
-                                      parseFloat(event.target.value) || 0
-                                    )
-                                  }
-                                />
-                              </label>
-                            </div>
-
-                            {/* Line summary */}
-                            <div className="flex items-center justify-between text-[8px] sm:text-xs">
-                              <span className="text-on-secondary-container">
-                                Subtotal ₹{(line?.lineSubtotal ?? item.price * item.quantity).toFixed(2)}
-                                {line && line.discountAmount > 0 && (
-                                  <span className="ml-1 sm:ml-2 text-emerald-700 font-semibold">
-                                    Saved ₹{line.discountAmount.toFixed(2)}
-                                  </span>
-                                )}
-                              </span>
-                              <span className="font-headline font-bold text-primary text-xs sm:text-sm">
-                                ₹{line?.total.toFixed(2) ?? "0.00"}
-                              </span>
-                            </div>
-                          </div>
-                        </motion.div>
-                      )}
-                    </AnimatePresence>
                   </motion.div>
                 );
               })}
@@ -521,10 +379,61 @@ export function CartPanel({
             </div>
 
             {/* Global Bill Discounts */}
-            <div className="rounded-lg border border-primary/10 bg-primary/5 p-2 sm:p-3 md:p-4 shadow-sm">
-              <span className="mb-1.5 sm:mb-2 block text-[8px] sm:text-[9px] md:text-[10px] font-bold uppercase tracking-[0.15em] text-primary">
+            <div className="rounded-xl border border-primary/10 bg-primary/5 p-3 sm:p-4 shadow-sm">
+              <span className="mb-2 block text-[9px] sm:text-[10px] font-black uppercase tracking-wider text-primary">
                 Bill Discount
               </span>
+              
+              {/* Quick Global Discounts Pill Row */}
+              <div className="mb-2.5 flex flex-wrap gap-1">
+                {[5, 10, 15].map((pct) => (
+                  <button
+                    key={`${pct}%`}
+                    type="button"
+                    onClick={() => {
+                      updateBillDiscount("billDiscountPercent", pct);
+                      updateBillDiscount("billManualDiscountAmount", 0); // clear other
+                    }}
+                    className={`rounded-full px-2.5 py-1 text-[10px] font-extrabold transition-all duration-150 active:scale-95 ${
+                      billDiscountPercent === pct
+                        ? "bg-primary text-white shadow-sm"
+                        : "bg-white text-primary border border-primary/20 hover:bg-primary/5"
+                    }`}
+                  >
+                    {pct}% Off
+                  </button>
+                ))}
+                {[50, 100, 200].map((amt) => (
+                  <button
+                    key={`₹${amt}`}
+                    type="button"
+                    onClick={() => {
+                      updateBillDiscount("billManualDiscountAmount", amt);
+                      updateBillDiscount("billDiscountPercent", 0); // clear other
+                    }}
+                    className={`rounded-full px-2.5 py-1 text-[10px] font-extrabold transition-all duration-150 active:scale-95 ${
+                      billManualDiscountAmount === amt
+                        ? "bg-primary text-white shadow-sm"
+                        : "bg-white text-primary border border-primary/20 hover:bg-primary/5"
+                    }`}
+                  >
+                    ₹{amt} Off
+                  </button>
+                ))}
+                {(billDiscountPercent > 0 || billManualDiscountAmount > 0) && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      updateBillDiscount("billDiscountPercent", 0);
+                      updateBillDiscount("billManualDiscountAmount", 0);
+                    }}
+                    className="rounded-full bg-red-50 text-red-700 border border-red-200 px-2.5 py-1 text-[10px] font-extrabold hover:bg-red-100 transition-colors"
+                  >
+                    Clear
+                  </button>
+                )}
+              </div>
+
               <div className="grid grid-cols-2 gap-2">
                 <div className="relative">
                   <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[10px] font-bold text-primary/40">%</span>
@@ -535,7 +444,12 @@ export function CartPanel({
                     max={100}
                     placeholder="Bill %"
                     value={billDiscountPercent || ""}
-                    onChange={(e) => updateBillDiscount("billDiscountPercent", parseFloat(e.target.value) || 0)}
+                    onChange={(e) => {
+                      updateBillDiscount("billDiscountPercent", parseFloat(e.target.value) || 0);
+                      if (parseFloat(e.target.value) > 0) {
+                        updateBillDiscount("billManualDiscountAmount", 0); // clear flat
+                      }
+                    }}
                   />
                 </div>
                 <div className="relative">
@@ -546,7 +460,12 @@ export function CartPanel({
                     min={0}
                     placeholder="Manual ₹"
                     value={billManualDiscountAmount || ""}
-                    onChange={(e) => updateBillDiscount("billManualDiscountAmount", parseFloat(e.target.value) || 0)}
+                    onChange={(e) => {
+                      updateBillDiscount("billManualDiscountAmount", parseFloat(e.target.value) || 0);
+                      if (parseFloat(e.target.value) > 0) {
+                        updateBillDiscount("billDiscountPercent", 0); // clear pct
+                      }
+                    }}
                   />
                 </div>
               </div>
@@ -610,6 +529,177 @@ export function CartPanel({
           </motion.div>
         </>
       )}
+
+      {/* Cart Item Edit Modal */}
+      {editingItem && (() => {
+        const item = items.find((i) => i.productId === editingItem);
+        if (!item) return null;
+        const line = lineMap.get(item.productId);
+        const manualDiscountLimit =
+          (line?.lineSubtotal ?? item.price * item.quantity) *
+          (1 - item.discountPercent / 100);
+
+        return (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm select-none">
+            <div 
+              className="fixed inset-0" 
+              onClick={() => setEditingItem(null)} 
+            />
+            <div className="relative w-full max-w-sm sm:max-w-md rounded-2xl border border-outline-variant/30 bg-white p-5 shadow-2xl animate-in fade-in zoom-in-95 duration-200">
+              <div className="mb-4 flex items-center justify-between">
+                <div>
+                  <h4 className="font-headline text-sm sm:text-base font-bold text-on-surface">Edit Cart Item</h4>
+                  <p className="text-[11px] text-slate-500 font-medium truncate max-w-[200px] sm:max-w-[280px]">{item.name}</p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setEditingItem(null)}
+                  className="flex h-8 w-8 items-center justify-center rounded-full bg-slate-100 hover:bg-slate-200 transition"
+                >
+                  <span className="material-symbols-outlined text-sm">close</span>
+                </button>
+              </div>
+
+              <div className="space-y-4">
+                <label className="block">
+                  <span className="mb-1 block text-[10px] font-black uppercase tracking-wider text-slate-500">
+                    Unit Price (₹)
+                  </span>
+                  <input
+                    className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-xs sm:text-sm font-bold tabular-nums outline-none focus:border-primary focus:ring-4 focus:ring-primary/10 shadow-sm"
+                    type="number"
+                    min={0}
+                    step="0.01"
+                    value={item.price}
+                    onChange={(event) =>
+                      updateItem(
+                        item.productId,
+                        "price",
+                        parseFloat(event.target.value) || 0
+                      )
+                    }
+                  />
+                </label>
+
+                <div className="grid grid-cols-2 gap-3">
+                  <label className="block">
+                    <span className="mb-1 block text-[10px] font-black uppercase tracking-wider text-slate-500">
+                      Discount (%)
+                    </span>
+                    <div className="flex gap-1.5">
+                      <button
+                        type="button"
+                        className={`shrink-0 rounded-lg px-2.5 text-[10px] font-black transition-all ${
+                          item.discountPercent === 10
+                            ? "bg-primary text-white shadow-sm shadow-primary/20"
+                            : "bg-slate-100 text-slate-600 hover:bg-slate-200"
+                        }`}
+                        onClick={() =>
+                          updateItem(
+                            item.productId,
+                            "discountPercent",
+                            item.discountPercent === 10 ? 0 : 10
+                          )
+                        }
+                      >
+                        10%
+                      </button>
+                      <input
+                        className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-xs sm:text-sm font-bold tabular-nums outline-none focus:border-primary focus:ring-4 focus:ring-primary/10 text-right shadow-sm"
+                        type="number"
+                        min={0}
+                        max={100}
+                        step="0.01"
+                        value={item.discountPercent}
+                        onChange={(event) =>
+                          updateItem(
+                            item.productId,
+                            "discountPercent",
+                            parseFloat(event.target.value) || 0
+                          )
+                        }
+                      />
+                    </div>
+                  </label>
+
+                  <label className="block">
+                    <span className="mb-1 block text-[10px] font-black uppercase tracking-wider text-slate-500">
+                      Manual Disc (₹)
+                    </span>
+                    <input
+                      className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-xs sm:text-sm font-bold tabular-nums outline-none focus:border-primary focus:ring-4 focus:ring-primary/10 text-right shadow-sm"
+                      type="number"
+                      min={0}
+                      max={Math.max(0, manualDiscountLimit)}
+                      step="0.01"
+                      value={item.manualDiscountAmount}
+                      onChange={(event) =>
+                        updateItem(
+                          item.productId,
+                          "manualDiscountAmount",
+                          parseFloat(event.target.value) || 0
+                        )
+                      }
+                    />
+                  </label>
+                </div>
+
+                <label className="block">
+                  <span className="mb-1 block text-[10px] font-black uppercase tracking-wider text-slate-500">
+                    Tax (%)
+                  </span>
+                  <input
+                    className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-xs sm:text-sm font-bold tabular-nums outline-none focus:border-primary focus:ring-4 focus:ring-primary/10 shadow-sm"
+                    type="number"
+                    min={0}
+                    max={100}
+                    step="0.01"
+                    value={item.taxPercent}
+                    onChange={(event) =>
+                      updateItem(
+                        item.productId,
+                        "taxPercent",
+                        parseFloat(event.target.value) || 0
+                      )
+                    }
+                  />
+                </label>
+
+                <div className="border border-slate-100 rounded-xl bg-slate-50/50 p-3 space-y-1.5 mt-2 shadow-inner">
+                  <div className="flex justify-between text-[11px] text-slate-500 font-medium">
+                    <span>Base Subtotal:</span>
+                    <span className="font-extrabold text-slate-700">₹{(line?.lineSubtotal ?? item.price * item.quantity).toFixed(2)}</span>
+                  </div>
+                  {line && line.discountAmount > 0 && (
+                    <div className="flex justify-between text-[11px] text-emerald-700 font-medium">
+                      <span>Discount Saved:</span>
+                      <span className="font-black">-₹{line.discountAmount.toFixed(2)}</span>
+                    </div>
+                  )}
+                  {line && line.taxAmount > 0 && (
+                    <div className="flex justify-between text-[11px] text-slate-500 font-medium">
+                      <span>GST Tax ({item.taxPercent}%):</span>
+                      <span className="font-extrabold text-slate-700">+₹{line.taxAmount.toFixed(2)}</span>
+                    </div>
+                  )}
+                  <div className="flex justify-between text-xs font-black text-primary border-t border-dashed border-slate-200 pt-2 mt-1">
+                    <span>Item Total:</span>
+                    <span>₹{line?.total.toFixed(2) ?? "0.00"}</span>
+                  </div>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={() => setEditingItem(null)}
+                  className="w-full rounded-xl bg-primary py-3 text-xs sm:text-sm font-black text-white shadow-lg shadow-primary/20 hover:bg-primary-hover active:scale-95 transition-all"
+                >
+                  Save & Apply Changes
+                </button>
+              </div>
+            </div>
+          </div>
+        );
+      })()}
     </div>
   );
 }

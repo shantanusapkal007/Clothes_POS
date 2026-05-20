@@ -62,10 +62,11 @@ function ProductGridComponent({
       variants={containerVariants}
       initial="hidden"
       animate="show"
-      className="grid grid-cols-4 gap-1 xs:grid-cols-4 xs:gap-1.5 sm:grid-cols-4 sm:gap-2 md:grid-cols-5 md:gap-3 lg:grid-cols-6 lg:gap-3"
+      className="grid grid-cols-3 gap-2 xs:grid-cols-3 xs:gap-2.5 sm:grid-cols-4 sm:gap-3 md:grid-cols-4 md:gap-4 lg:grid-cols-5 lg:gap-4 xl:grid-cols-6"
     >
       {products.map((product) => {
-        const lowStock = product.stock <= (product.minStock ?? 2);
+        const isOutOfStock = product.stock <= 0;
+        const isLowStock = !isOutOfStock && product.stock <= (product.minStock ?? 2);
         const color = getColor(product.name);
         return (
           <motion.button
@@ -73,44 +74,63 @@ function ProductGridComponent({
             key={product.id}
             type="button"
             onClick={() => onAdd(product)}
-            className="group relative flex flex-col items-center rounded-lg sm:rounded-xl border border-outline-variant/25 bg-white p-1.5 sm:p-2 md:p-3 text-center shadow-sm transition-all active:scale-[0.95] active:shadow-md md:hover:shadow-md md:hover:-translate-y-0.5 touch-action-manipulation"
-            style={{ minHeight: '100px' }}
+            disabled={isOutOfStock}
+            className={`group relative flex flex-col items-center rounded-xl sm:rounded-2xl border bg-white p-2.5 sm:p-3 md:p-4 text-center shadow-sm transition-all duration-200 active:scale-[0.95] active:shadow-md md:hover:shadow-lg md:hover:-translate-y-1 touch-action-manipulation select-none ${
+              isOutOfStock
+                ? "border-outline-variant/10 opacity-40 cursor-not-allowed bg-slate-50"
+                : isLowStock
+                ? "border-amber-300 ring-2 ring-amber-100/50 hover:border-amber-400"
+                : "border-outline-variant/30 hover:border-primary/50"
+            }`}
+            style={{ minHeight: '120px' }}
           >
-            {/* Low stock indicator */}
-            {lowStock && (
-              <span className="absolute -right-0.5 -top-0.5 flex h-3 w-3 sm:h-3.5 sm:w-3.5 items-center justify-center rounded-full bg-red-500 text-[6px] sm:text-[7px] font-bold text-white ring-2 ring-white low-stock-pulse">
-                !
+            {/* Low / Out of Stock Banner */}
+            {isOutOfStock && (
+              <span className="absolute left-1/2 top-2 -translate-x-1/2 rounded bg-red-600 px-1.5 py-0.5 text-[8px] font-black uppercase tracking-wider text-white shadow">
+                Sold Out
               </span>
             )}
 
             {/* Avatar circle */}
-            <div className={`flex h-9 w-9 sm:h-11 sm:w-11 md:h-14 md:w-14 items-center justify-center rounded-full ${color.bg} mb-1 sm:mb-1.5 md:mb-2`}>
-              <span className={`text-xs sm:text-sm md:text-base font-bold ${color.text}`}>
+            <div className={`flex h-11 w-11 sm:h-12 sm:w-12 md:h-16 md:w-16 items-center justify-center rounded-full ${color.bg} mb-1.5 sm:mb-2 shadow-inner group-hover:scale-105 transition-transform duration-200`}>
+              <span className={`text-xs sm:text-sm md:text-lg font-extrabold tracking-wide ${color.text}`}>
                 {getInitials(product.name)}
               </span>
             </div>
 
             {/* Product name */}
-            <p className="line-clamp-2 w-full text-[11px] sm:text-xs font-bold leading-tight text-on-surface">
+            <p className="line-clamp-2 w-full text-[11px] sm:text-xs font-extrabold leading-snug text-on-surface group-hover:text-primary transition-colors">
               {product.name}
             </p>
 
             {/* Category */}
             {product.category && (
-              <p className="mt-0.5 truncate w-full text-[9px] font-bold uppercase tracking-wider text-on-secondary-container/70 sm:text-[10px]">
+              <span className="mt-1 rounded-full bg-secondary/5 px-2 py-0.5 text-[8px] font-black uppercase tracking-widest text-secondary/80 sm:text-[9px]">
                 {product.category}
-              </p>
+              </span>
             )}
 
             {/* Price */}
-            <p className="mt-auto pt-1 text-sm font-extrabold tabular-nums text-primary">
+            <p className="mt-auto pt-2 text-sm sm:text-base font-black tabular-nums text-primary">
               ₹{product.price.toFixed(0)}
             </p>
 
-            {/* Stock count */}
-            <p className={`text-[8px] font-bold tabular-nums uppercase ${lowStock ? "text-red-600" : "text-on-secondary-container/50"} sm:text-[9px]`}>
-              {product.stock} in stock
-            </p>
+            {/* Stock status badge */}
+            <div className="mt-1 w-full flex items-center justify-center">
+              {isOutOfStock ? (
+                <span className="rounded bg-red-50 px-1 py-0.5 text-[8px] font-extrabold uppercase text-red-600">
+                  Out of Stock (0)
+                </span>
+              ) : isLowStock ? (
+                <span className="rounded bg-amber-50 px-1 py-0.5 text-[8px] font-extrabold uppercase text-amber-700 animate-pulse">
+                  Low Stock ({product.stock})
+                </span>
+              ) : (
+                <span className="rounded bg-green-50 px-1 py-0.5 text-[8px] font-bold uppercase text-green-700">
+                  {product.stock} in stock
+                </span>
+              )}
+            </div>
           </motion.button>
         );
       })}

@@ -168,6 +168,12 @@ export function InventoryManager() {
     )}&background=ffe4e6&color=9f1239&size=128&font-size=0.3`;
   };
 
+  const getStockBadge = (stock: number, minStock: number) => {
+    if (stock === 0) return { label: 'Sold Out', cls: 'bg-rose-100 text-rose-700 border-rose-200' };
+    if (stock <= minStock) return { label: 'Low Stock', cls: 'bg-amber-100 text-amber-700 border-amber-200' };
+    return { label: 'In Stock', cls: 'bg-emerald-100 text-emerald-700 border-emerald-200' };
+  };
+
   return (
     <div className="relative grid grid-cols-1 items-start gap-8 lg:grid-cols-12">
       {/* Hidden print helper */}
@@ -391,93 +397,213 @@ export function InventoryManager() {
             <p className="text-sm">Store looks empty. Add some new stock!</p>
           </div>
         ) : (
-          <div className="hidden overflow-x-auto md:block">
-            <table className="min-w-[600px] w-full border-collapse text-left">
-              <thead>
-                <tr className="border-b border-outline-variant/20 text-[10px] font-bold uppercase tracking-[0.1em] text-on-surface-variant/60 sm:text-xs">
-                  <th className="pb-4 pl-2">Item Detail</th>
-                  <th className="pb-4 text-center">Stock</th>
-                  <th className="pb-4 text-right">Purchase</th>
-                  <th className="pb-4 text-right">Selling</th>
-                  <th className="pb-4 text-right">Margin</th>
-                  <th className="pb-4 pr-2 text-right">Actions</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-outline-variant/10">
-                {visibleProducts.map((p) => (
-                  <tr key={p.id} className="group transition-colors hover:bg-slate-50/50">
-                    <td className="py-4 pl-2 md:py-6">
-                      <div className="flex items-center gap-3">
-                        <div className="h-12 w-12 shrink-0 overflow-hidden rounded-xl bg-slate-100">
+          <>
+            {/* ===== Desktop Table (hidden on mobile) ===== */}
+            <div className="hidden overflow-x-auto md:block">
+              <table className="min-w-[600px] w-full border-collapse text-left">
+                <thead>
+                  <tr className="border-b border-outline-variant/20 text-[10px] font-bold uppercase tracking-[0.1em] text-on-surface-variant/60 sm:text-xs">
+                    <th className="pb-4 pl-2">Item Detail</th>
+                    <th className="pb-4 text-center">Stock</th>
+                    <th className="pb-4 text-center">Status</th>
+                    <th className="pb-4 text-right">Purchase</th>
+                    <th className="pb-4 text-right">Selling</th>
+                    <th className="pb-4 text-right">Margin</th>
+                    <th className="pb-4 pr-2 text-right">Actions</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-outline-variant/10">
+                  {visibleProducts.map((p) => {
+                    const badge = getStockBadge(p.stock, p.minStock);
+                    const margin = p.costPrice > 0 ? (((p.price - p.costPrice) / p.costPrice) * 100).toFixed(0) : "0";
+                    return (
+                      <tr key={p.id} className="group transition-colors hover:bg-slate-50/50">
+                        <td className="py-4 pl-2 md:py-6">
+                          <div className="flex items-center gap-3">
+                            <div className="h-12 w-12 shrink-0 overflow-hidden rounded-xl bg-slate-100">
+                              <img alt={p.name} src={getProductImage(p.name)} className="h-full w-full object-cover" />
+                            </div>
+                            <div className="min-w-0">
+                              <div className="truncate font-serif text-base font-bold text-slate-900">{p.name}</div>
+                              <div className="mt-1 text-[10px] font-black uppercase tracking-widest text-slate-400">
+                                {p.category} • SKU: {p.barcode || p.id.slice(-8)}
+                              </div>
+                            </div>
+                          </div>
+                        </td>
+                        <td className="py-4 text-center md:py-6">
+                          <div className="inline-flex items-center gap-1">
+                            <button
+                              onClick={() => handleUpdateField(p.id, 'stock', Math.max(0, p.stock - 1))}
+                              className="flex h-11 w-11 items-center justify-center rounded-lg bg-slate-100 text-lg font-bold text-slate-600 transition hover:bg-slate-200 active:scale-95"
+                              title="Decrease stock"
+                            >
+                              −
+                            </button>
+                            <input
+                              className={`w-16 rounded-xl border p-2 text-center text-sm font-black shadow-sm ${
+                                p.stock <= p.minStock ? "border-rose-200 bg-rose-50 text-rose-600" : "border-slate-100 bg-white text-slate-900"
+                              }`}
+                              type="number"
+                              value={p.stock}
+                              onChange={(e) => handleUpdateField(p.id, "stock", parseInt(e.target.value, 10) || 0)}
+                            />
+                            <button
+                              onClick={() => handleUpdateField(p.id, 'stock', p.stock + 1)}
+                              className="flex h-11 w-11 items-center justify-center rounded-lg bg-slate-100 text-lg font-bold text-slate-600 transition hover:bg-slate-200 active:scale-95"
+                              title="Increase stock"
+                            >
+                              +
+                            </button>
+                          </div>
+                        </td>
+                        <td className="py-4 text-center md:py-6">
+                          <span className={`inline-block rounded-full border px-3 py-1 text-[10px] font-black uppercase tracking-wide ${badge.cls}`}>
+                            {badge.label}
+                          </span>
+                        </td>
+                        <td className="py-4 text-right md:py-6">
+                          <input
+                            className="w-24 rounded-xl border border-slate-100 bg-white p-2 text-right font-serif text-sm font-bold focus:border-slate-900 focus:ring-0"
+                            type="number"
+                            value={p.costPrice}
+                            step="0.01"
+                            onChange={(e) => handleUpdateField(p.id, "costPrice", parseFloat(e.target.value) || 0)}
+                          />
+                        </td>
+                        <td className="py-4 text-right md:py-6">
+                          <input
+                            className="w-24 rounded-xl border border-slate-100 bg-white p-2 text-right font-serif text-sm font-bold focus:border-slate-900 focus:ring-0"
+                            type="number"
+                            value={p.price}
+                            step="0.01"
+                            onChange={(e) => handleUpdateField(p.id, "price", parseFloat(e.target.value) || 0)}
+                          />
+                        </td>
+                        <td className="py-4 text-right md:py-6">
+                          <span className={`text-xs font-black ${p.price > p.costPrice ? "text-emerald-600" : "text-rose-500"}`}>
+                            {margin}%
+                          </span>
+                        </td>
+                        <td className="py-4 pr-2 text-right md:py-6">
+                          <div className="flex justify-end gap-2">
+                            <button
+                              onClick={() => handlePrintBarcode(p)}
+                              className="material-symbols-outlined rounded-xl bg-slate-50 p-2 text-slate-400 transition hover:bg-slate-900 hover:text-white"
+                              title="Print Barcode"
+                            >
+                              barcode_scanner
+                            </button>
+                            <button
+                              onClick={() => handleDelete(p.id, p.name)}
+                              className="material-symbols-outlined rounded-xl bg-slate-50 p-2 text-rose-300 transition hover:bg-rose-600 hover:text-white"
+                              title="Delete"
+                            >
+                              delete
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+
+            {/* ===== Mobile Card List (visible only on mobile) ===== */}
+            <div className="block md:hidden">
+              <div className="grid grid-cols-1 gap-3">
+                {visibleProducts.map((p) => {
+                  const badge = getStockBadge(p.stock, p.minStock);
+                  const margin = p.costPrice > 0 ? (((p.price - p.costPrice) / p.costPrice) * 100).toFixed(0) : "0";
+                  return (
+                    <div
+                      key={p.id}
+                      className="rounded-2xl border border-outline-variant/20 bg-white p-4 shadow-sm"
+                    >
+                      {/* Top row: Avatar + Info + Badge */}
+                      <div className="flex items-start gap-3">
+                        <div className="h-14 w-14 shrink-0 overflow-hidden rounded-xl bg-slate-100">
                           <img alt={p.name} src={getProductImage(p.name)} className="h-full w-full object-cover" />
                         </div>
-                        <div className="min-w-0">
+                        <div className="min-w-0 flex-1">
                           <div className="truncate font-serif text-base font-bold text-slate-900">{p.name}</div>
-                          <div className="mt-1 text-[10px] font-black uppercase tracking-widest text-slate-400">
+                          <div className="mt-0.5 text-[10px] font-black uppercase tracking-widest text-slate-400">
                             {p.category} • SKU: {p.barcode || p.id.slice(-8)}
                           </div>
                         </div>
+                        <span className={`shrink-0 rounded-full border px-2.5 py-1 text-[10px] font-black uppercase tracking-wide ${badge.cls}`}>
+                          {badge.label}
+                        </span>
                       </div>
-                    </td>
-                    <td className="py-4 text-center md:py-6">
-                      <div className="inline-flex flex-col items-center">
-                        <input
-                          className={`w-16 rounded-xl border p-2 text-center text-sm font-black shadow-sm ${
-                            p.stock <= p.minStock ? "border-rose-200 bg-rose-50 text-rose-600" : "border-slate-100 bg-white text-slate-900"
-                          }`}
-                          type="number"
-                          value={p.stock}
-                          onChange={(e) => handleUpdateField(p.id, "stock", parseInt(e.target.value, 10) || 0)}
-                        />
-                        {p.stock <= p.minStock && <span className="mt-1 text-[8px] font-black uppercase text-rose-500">Low Stock</span>}
+
+                      {/* Price row */}
+                      <div className="mt-3 flex items-center gap-4 rounded-xl bg-slate-50 px-3 py-2.5">
+                        <div className="flex-1">
+                          <div className="text-[9px] font-bold uppercase tracking-wider text-slate-400">Cost</div>
+                          <div className="font-serif text-sm font-bold text-slate-700">₹{p.costPrice}</div>
+                        </div>
+                        <div className="flex-1">
+                          <div className="text-[9px] font-bold uppercase tracking-wider text-slate-400">Selling</div>
+                          <div className="font-serif text-sm font-bold text-slate-900">₹{p.price}</div>
+                        </div>
+                        <div className="flex-1 text-right">
+                          <div className="text-[9px] font-bold uppercase tracking-wider text-slate-400">Margin</div>
+                          <div className={`font-serif text-sm font-black ${p.price > p.costPrice ? "text-emerald-600" : "text-rose-500"}`}>
+                            {margin}%
+                          </div>
+                        </div>
                       </div>
-                    </td>
-                    <td className="py-4 text-right md:py-6">
-                      <input
-                        className="w-24 rounded-xl border border-slate-100 bg-white p-2 text-right font-serif text-sm font-bold focus:border-slate-900 focus:ring-0"
-                        type="number"
-                        value={p.costPrice}
-                        step="0.01"
-                        onChange={(e) => handleUpdateField(p.id, "costPrice", parseFloat(e.target.value) || 0)}
-                      />
-                    </td>
-                    <td className="py-4 text-right md:py-6">
-                      <input
-                        className="w-24 rounded-xl border border-slate-100 bg-white p-2 text-right font-serif text-sm font-bold focus:border-slate-900 focus:ring-0"
-                        type="number"
-                        value={p.price}
-                        step="0.01"
-                        onChange={(e) => handleUpdateField(p.id, "price", parseFloat(e.target.value) || 0)}
-                      />
-                    </td>
-                    <td className="py-4 text-right md:py-6">
-                      <span className={`text-xs font-black ${p.price > p.costPrice ? "text-emerald-600" : "text-rose-500"}`}>
-                        {p.costPrice > 0 ? (((p.price - p.costPrice) / p.costPrice) * 100).toFixed(0) : "0"}%
-                      </span>
-                    </td>
-                    <td className="py-4 pr-2 text-right md:py-6">
-                      <div className="flex justify-end gap-2">
-                        <button
-                          onClick={() => handlePrintBarcode(p)}
-                          className="material-symbols-outlined rounded-xl bg-slate-50 p-2 text-slate-400 transition hover:bg-slate-900 hover:text-white"
-                          title="Print Barcode"
-                        >
-                          barcode_scanner
-                        </button>
-                        <button
-                          onClick={() => handleDelete(p.id, p.name)}
-                          className="material-symbols-outlined rounded-xl bg-slate-50 p-2 text-rose-300 transition hover:bg-rose-600 hover:text-white"
-                          title="Delete"
-                        >
-                          delete
-                        </button>
+
+                      {/* Stock stepper + actions row */}
+                      <div className="mt-3 flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <button
+                            onClick={() => handleUpdateField(p.id, 'stock', Math.max(0, p.stock - 1))}
+                            className="flex h-12 w-12 items-center justify-center rounded-lg bg-slate-100 text-xl font-bold text-slate-600 transition active:scale-90"
+                            title="Decrease stock"
+                          >
+                            −
+                          </button>
+                          <input
+                            className={`w-16 rounded-xl border p-2 text-center text-sm font-black shadow-sm ${
+                              p.stock <= p.minStock ? "border-rose-200 bg-rose-50 text-rose-600" : "border-slate-100 bg-white text-slate-900"
+                            }`}
+                            type="number"
+                            value={p.stock}
+                            onChange={(e) => handleUpdateField(p.id, "stock", parseInt(e.target.value, 10) || 0)}
+                          />
+                          <button
+                            onClick={() => handleUpdateField(p.id, 'stock', p.stock + 1)}
+                            className="flex h-12 w-12 items-center justify-center rounded-lg bg-slate-100 text-xl font-bold text-slate-600 transition active:scale-90"
+                            title="Increase stock"
+                          >
+                            +
+                          </button>
+                        </div>
+                        <div className="flex gap-2">
+                          <button
+                            onClick={() => handlePrintBarcode(p)}
+                            className="material-symbols-outlined flex h-12 w-12 items-center justify-center rounded-xl bg-slate-50 text-slate-400 transition active:bg-slate-200"
+                            title="Print Barcode"
+                          >
+                            barcode_scanner
+                          </button>
+                          <button
+                            onClick={() => handleDelete(p.id, p.name)}
+                            className="material-symbols-outlined flex h-12 w-12 items-center justify-center rounded-xl bg-slate-50 text-rose-400 transition active:bg-rose-100"
+                            title="Delete"
+                          >
+                            delete
+                          </button>
+                        </div>
                       </div>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          </>
         )}
       </section>
     </div>

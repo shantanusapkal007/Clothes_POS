@@ -79,6 +79,7 @@ export function PosWorkspace() {
   const [currentPage, setCurrentPage] = useState(1);
   const [totalCount, setTotalCount] = useState<number | null>(null);
   const [search, setSearch] = useState("");
+  const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const [barcodeInput, setBarcodeInput] = useState("");
   const [loading, setLoading] = useState(true);
   const [checkoutPending, setCheckoutPending] = useState(false);
@@ -102,19 +103,41 @@ export function PosWorkspace() {
   });
   const [pendingCustomerName, setPendingCustomerName] = useState<string>("");
 
+  // Extract unique categories dynamically from products
+  const categories = useMemo(() => {
+    const cats = new Set<string>();
+    products.forEach((p) => {
+      if (p.category) {
+        cats.add(p.category);
+      }
+    });
+    return Array.from(cats);
+  }, [products]);
+
+  // Frequently Sold / Favorites panel items (up to 8 products)
+  const favoriteProducts = useMemo(() => {
+    return products.slice(0, 8);
+  }, [products]);
+
   const visibleProducts = useMemo(() => {
+    let filtered = products;
+
+    if (selectedCategory) {
+      filtered = filtered.filter((p) => p.category === selectedCategory);
+    }
+
     if (!search.trim()) {
-      return products;
+      return filtered;
     }
 
     const query = search.toLowerCase();
-    return products.filter((product) =>
+    return filtered.filter((product) =>
       [product.name, product.category || "", product.barcode || ""]
         .join(" ")
         .toLowerCase()
         .includes(query)
     );
-  }, [products, search]);
+  }, [products, search, selectedCategory]);
 
   const cartSummary = useMemo(
     () => calculateCart(items, billDiscountPercent, billManualDiscountAmount),
@@ -446,11 +469,11 @@ export function PosWorkspace() {
         <div className={`flex flex-1 flex-col overflow-hidden ${mobileView === "cart" ? "hidden xl:flex" : "flex"} xl:border-r xl:border-outline-variant/20`}>
           {/* Search — compact on mobile */}
           <div className="flex-shrink-0 border-b border-outline-variant/20 bg-surface-dim p-2 sm:p-3 md:p-4">
-            <div className="flex items-center gap-2 rounded-lg border border-outline-variant/40 bg-white px-3 py-2.5 sm:rounded-xl sm:px-3 sm:py-2.5">
+            <div className="flex items-center gap-2 rounded-lg border border-outline-variant/40 bg-white px-3 py-2.5 sm:rounded-xl sm:px-3 sm:py-2.5 shadow-sm">
               <span className="material-symbols-outlined text-on-secondary-container/40 text-lg sm:text-xl" style={{ fontSize: 18 }}>search</span>
               <input
                 className="flex-1 border-none bg-transparent text-xs sm:text-sm text-on-surface placeholder:text-on-secondary-container/50 focus:outline-none focus:ring-0"
-                placeholder="Search..."
+                placeholder="Search products by name, category, or barcode..."
                 value={search}
                 onChange={(event) => setSearch(event.target.value)}
                 style={{ fontSize: 16 }}
@@ -466,6 +489,78 @@ export function PosWorkspace() {
                 </button>
               )}
             </div>
+
+            {/* Category Filters */}
+            {categories.length > 0 && (
+              <div className="mt-2.5 flex gap-1.5 overflow-x-auto pb-1.5 scrollbar-thin select-none touch-action-manipulation">
+                <button
+                  type="button"
+                  onClick={() => setSelectedCategory(null)}
+                  className={`px-3 py-1.5 rounded-full text-xs font-bold whitespace-nowrap transition-all duration-200 ${
+                    selectedCategory === null
+                      ? "bg-primary text-white shadow-md shadow-primary/20 scale-102"
+                      : "bg-white text-on-surface border border-outline-variant/40 hover:bg-surface-container-low"
+                  }`}
+                >
+                  All Categories
+                </button>
+                {categories.map((cat) => (
+                  <button
+                    key={cat}
+                    type="button"
+                    onClick={() => setSelectedCategory(cat)}
+                    className={`px-3 py-1.5 rounded-full text-xs font-bold whitespace-nowrap transition-all duration-200 ${
+                      selectedCategory === cat
+                        ? "bg-primary text-white shadow-md shadow-primary/20 scale-102"
+                        : "bg-white text-on-surface border border-outline-variant/40 hover:bg-surface-container-low"
+                    }`}
+                  >
+                    {cat}
+                  </button>
+                ))}
+              </div>
+            )}
+
+            {/* ⭐ Quick Tap Favorites / Frequently Sold */}
+            {!search && favoriteProducts.length > 0 && (
+              <div className="mt-2 border-t border-outline-variant/10 pt-2">
+                <div className="flex items-center gap-1 mb-1.5 px-0.5">
+                  <span className="material-symbols-outlined text-amber-500 text-sm fill-amber-500" style={{ fontVariationSettings: "'FILL' 1" }}>star</span>
+                  <span className="text-[10px] font-extrabold uppercase tracking-wider text-on-surface-variant/70">⚡ Quick Tap Favorites</span>
+                </div>
+                <div className="flex gap-1.5 overflow-x-auto pb-1 scrollbar-thin touch-action-manipulation">
+                  {favoriteProducts.map((product) => {
+                    const lowStock = product.stock <= (product.minStock ?? 2);
+                    return (
+                      <button
+                        key={product.id}
+                        type="button"
+                        onClick={() => handleProductAdd(product)}
+                        className="flex flex-col justify-between items-start min-w-[110px] max-w-[140px] p-2 bg-white rounded-lg border border-outline-variant/35 text-left hover:border-primary/50 transition-all shadow-sm active:scale-95 group shrink-0"
+                      >
+                        <span className="text-[11px] font-bold text-on-surface line-clamp-1 w-full group-hover:text-primary transition-colors">
+                          {product.name}
+                        </span>
+                        <div className="flex justify-between items-center w-full mt-1">
+                          <span className="text-[10px] text-primary font-black">
+                            ₹{product.price.toFixed(0)}
+                          </span>
+                          {lowStock ? (
+                            <span className="text-[8px] text-red-600 font-extrabold px-1 bg-red-50 rounded">
+                              {product.stock === 0 ? "Out" : `${product.stock} left`}
+                            </span>
+                          ) : (
+                            <span className="text-[8px] text-slate-500 font-medium">
+                              Qty: {product.stock}
+                            </span>
+                          )}
+                        </div>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
           </div>
           <div className="flex-1 overflow-y-auto p-2 sm:p-3 md:p-4" style={{ WebkitOverflowScrolling: "touch" }}>
             {loading ? (
