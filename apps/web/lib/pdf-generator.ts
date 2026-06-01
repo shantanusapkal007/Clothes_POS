@@ -79,8 +79,22 @@ export async function generatePDFBill(
   });
 
   // Summary
-  const finalY = (doc as any).lastAutoTable.finalY + 10;
+  const pageHeight = doc.internal.pageSize.height;
+  let finalY = (doc as any).lastAutoTable.finalY + 10;
+
+  // Calculate dynamic height needed for the summary block
+  let summaryHeightNeeded = 25; // Base height for subtotal, total amount, and some margins
+  if (layout.showDiscountBreakdown && bill.discountAmount > 0) summaryHeightNeeded += 6;
+  if (layout.showTaxBreakdown && bill.taxAmount > 0) summaryHeightNeeded += 6;
+  if (layout.footerText) summaryHeightNeeded += 20;
+
+  // If summary + footer overflows the page, add a clean page break
+  if (finalY + summaryHeightNeeded > pageHeight - 15) {
+    doc.addPage();
+    finalY = 20; // Reset starting Y coordinate on new page
+  }
   
+  doc.setFontSize(10);
   doc.setFont("helvetica", "normal");
   doc.text(`Subtotal:`, pageWidth - 54, finalY);
   doc.text(`₹${bill.totalAmount.toFixed(2)}`, pageWidth - 14, finalY, { align: "right" });
@@ -109,6 +123,11 @@ export async function generatePDFBill(
 
   summaryY += 15;
   if (layout.footerText) {
+    // If the footer overflows even after summary placement, add a new page specifically for it
+    if (summaryY > pageHeight - 10) {
+      doc.addPage();
+      summaryY = 20;
+    }
     doc.setFont("helvetica", "italic");
     doc.setFontSize(10);
     doc.text(layout.footerText, pageWidth / 2, summaryY, { align: "center" });

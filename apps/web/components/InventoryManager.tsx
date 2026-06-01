@@ -6,6 +6,7 @@ import { type Product } from "../types";
 import { createProduct, deleteProduct, getProducts, updateProduct } from "../lib/api";
 import { InventorySkeleton } from "./Skeleton";
 import Barcode from "react-barcode";
+import { getBillLayoutConfig } from "../lib/printer";
 
 type FormState = {
   name: string;
@@ -130,6 +131,8 @@ export function InventoryManager() {
   }, [products, search, filterLowStock]);
 
   const handlePrintBarcode = (p: Product) => {
+    const layout = getBillLayoutConfig();
+    const storeName = layout.companyName || "Clothing Store";
     setBarcodeToPrint(p);
     setTimeout(() => {
       const content = printRef.current;
@@ -141,17 +144,132 @@ export function InventoryManager() {
           <head>
             <title>Print Barcode - ${p.name}</title>
             <style>
-              body { display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100vh; margin: 0; font-family: sans-serif; }
-              .label { text-align: center; border: 1px solid #eee; padding: 20px; border-radius: 8px; }
-              .name { font-weight: bold; margin-bottom: 5px; font-size: 14px; }
-              .price { font-size: 18px; font-weight: 900; margin-top: 5px; }
+              @media print {
+                @page {
+                  size: 50mm 25mm;
+                  margin: 0;
+                }
+                body {
+                  margin: 0;
+                  padding: 0;
+                  background: #fff;
+                  width: 50mm;
+                  height: 25mm;
+                  display: flex;
+                  align-items: center;
+                  justify-content: center;
+                }
+              }
+              body {
+                font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+                background: #f0f0f0;
+                margin: 0;
+                padding: 0;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                height: 100vh;
+              }
+              .label-card {
+                background: #fff;
+                width: 50mm;
+                height: 25mm;
+                box-sizing: border-box;
+                padding: 1.5mm 2mm;
+                display: flex;
+                flex-direction: column;
+                justify-content: space-between;
+                align-items: center;
+                overflow: hidden;
+              }
+              .store-name {
+                font-size: 8px;
+                font-weight: 800;
+                text-transform: uppercase;
+                letter-spacing: 0.1em;
+                color: #000;
+                margin: 0;
+                text-align: center;
+                white-space: nowrap;
+                overflow: hidden;
+                text-overflow: ellipsis;
+                width: 100%;
+                line-height: 1.1;
+              }
+              .barcode-wrapper {
+                display: flex;
+                justify-content: center;
+                align-items: center;
+                width: 100%;
+                height: 12mm;
+                overflow: hidden;
+                margin: 0.2mm 0;
+              }
+              .barcode-wrapper svg {
+                max-width: 100%;
+                max-height: 100%;
+              }
+              .bottom-row {
+                display: flex;
+                justify-content: space-between;
+                align-items: flex-end;
+                width: 100%;
+                border-top: 0.2mm dashed #000;
+                padding-top: 0.6mm;
+                margin-top: 0.2mm;
+              }
+              .product-info {
+                display: flex;
+                flex-direction: column;
+                align-items: flex-start;
+                max-width: 65%;
+                overflow: hidden;
+                text-align: left;
+              }
+              .product-name {
+                font-size: 7px;
+                font-weight: 700;
+                color: #000;
+                white-space: nowrap;
+                overflow: hidden;
+                text-overflow: ellipsis;
+                width: 100%;
+                line-height: 1.1;
+              }
+              .product-type {
+                font-size: 5px;
+                font-weight: 500;
+                color: #555;
+                text-transform: uppercase;
+                line-height: 1;
+                margin-top: 0.2mm;
+                white-space: nowrap;
+                overflow: hidden;
+                text-overflow: ellipsis;
+                width: 100%;
+              }
+              .product-price {
+                font-size: 10px;
+                font-weight: 900;
+                color: #000;
+                white-space: nowrap;
+                line-height: 1;
+              }
             </style>
           </head>
           <body>
-            <div class="label">
-              <div class="name">${p.name}</div>
-              ${content.innerHTML}
-              <div class="price">₹${p.price}</div>
+            <div class="label-card">
+              <div class="store-name">${storeName}</div>
+              <div class="barcode-wrapper">
+                ${content.innerHTML}
+              </div>
+              <div class="bottom-row">
+                <div class="product-info">
+                  <div class="product-name">${p.name}</div>
+                  <div class="product-type">${p.category || "General"}</div>
+                </div>
+                <div class="product-price">₹${p.price.toFixed(2)}</div>
+              </div>
             </div>
             <script>window.onload = () => { window.print(); window.close(); }</script>
           </body>
@@ -182,9 +300,10 @@ export function InventoryManager() {
           {barcodeToPrint && (
             <Barcode 
               value={barcodeToPrint.barcode || barcodeToPrint.id.slice(-8)} 
-              width={1.5} 
-              height={50} 
-              fontSize={12}
+              width={1.2} 
+              height={35} 
+              fontSize={8}
+              margin={0}
             />
           )}
         </div>
