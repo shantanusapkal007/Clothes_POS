@@ -12,6 +12,19 @@ declare module "fastify" {
 import fs from "fs";
 import path from "path";
 
+function parseResilient(input: string): any {
+  try {
+    return JSON.parse(input);
+  } catch {
+    // Escape actual raw newlines that got unescaped during environment loading,
+    // and restore double-escaped newlines for JSON compliance.
+    const cleaned = input
+      .replace(/\r?\n/g, '\\n')
+      .replace(/\\'/g, "'");
+    return JSON.parse(cleaned);
+  }
+}
+
 let firebaseApp: admin.app.App;
 
 if (!admin.apps.length) {
@@ -21,7 +34,7 @@ if (!admin.apps.length) {
     // 1. Try FIREBASE_SERVICE_ACCOUNT_KEY env string
     const serviceAccountKey = process.env.FIREBASE_SERVICE_ACCOUNT_KEY;
     if (serviceAccountKey) {
-      serviceAccount = JSON.parse(serviceAccountKey);
+      serviceAccount = parseResilient(serviceAccountKey);
     }
     // 2. Try GOOGLE_APPLICATION_CREDENTIALS path (normalize backslashes)
     else if (process.env.GOOGLE_APPLICATION_CREDENTIALS) {
@@ -29,7 +42,7 @@ if (!admin.apps.length) {
         const cleanPath = process.env.GOOGLE_APPLICATION_CREDENTIALS.replace(/\\\\/g, "\\");
         const resolvedPath = path.resolve(cleanPath);
         if (fs.existsSync(resolvedPath)) {
-          serviceAccount = JSON.parse(fs.readFileSync(resolvedPath, "utf8"));
+          serviceAccount = parseResilient(fs.readFileSync(resolvedPath, "utf8"));
         }
       } catch (e) {
         console.warn("Failed to read GOOGLE_APPLICATION_CREDENTIALS file in API:", e);
@@ -47,7 +60,7 @@ if (!admin.apps.length) {
       for (const p of searchPaths) {
         try {
           if (fs.existsSync(p)) {
-            serviceAccount = JSON.parse(fs.readFileSync(p, "utf8"));
+            serviceAccount = parseResilient(fs.readFileSync(p, "utf8"));
             break;
           }
         } catch {}
@@ -55,6 +68,11 @@ if (!admin.apps.length) {
     }
 
     if (serviceAccount) {
+      // Ensure the private key has correct physical newline characters instead of literal "\n" strings
+      if (serviceAccount.private_key) {
+        serviceAccount.private_key = serviceAccount.private_key.replace(/\\n/g, '\n');
+      }
+
       firebaseApp = admin.initializeApp({
         credential: admin.credential.cert(serviceAccount),
         projectId: "clothes-94ef3"
