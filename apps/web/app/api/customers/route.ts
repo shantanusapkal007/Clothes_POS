@@ -39,10 +39,16 @@ export async function GET(request: NextRequest) {
 
     const snapshot = await adminDb.collection("customers")
       .where("storeId", "==", tenant.storeId)
-      .orderBy("updatedAt", "desc")
       .get();
 
     let customers = snapshot.docs.map(doc => doc.data());
+
+    // Sort in-memory descending by updatedAt
+    customers.sort((a, b) => {
+      const t1 = a.updatedAt?.toDate ? a.updatedAt.toDate().getTime() : (a.updatedAt ? new Date(a.updatedAt).getTime() : 0);
+      const t2 = b.updatedAt?.toDate ? b.updatedAt.toDate().getTime() : (b.updatedAt ? new Date(b.updatedAt).getTime() : 0);
+      return t2 - t1;
+    });
 
     if (search) {
       customers = customers.filter(c =>
@@ -56,10 +62,16 @@ export async function GET(request: NextRequest) {
       customers.map(async (c) => {
         const paymentsSnap = await adminDb.collection("payments")
           .where("customerId", "==", c.id)
-          .orderBy("createdAt", "desc")
-          .limit(50)
           .get();
-        return { ...c, payments: paymentsSnap.docs.map(d => d.data()) };
+        let payments = paymentsSnap.docs.map(d => d.data());
+        // Sort in-memory descending by createdAt
+        payments.sort((x, y) => {
+          const t1 = x.createdAt?.toDate ? x.createdAt.toDate().getTime() : (x.createdAt ? new Date(x.createdAt).getTime() : 0);
+          const t2 = y.createdAt?.toDate ? y.createdAt.toDate().getTime() : (y.createdAt ? new Date(y.createdAt).getTime() : 0);
+          return t2 - t1;
+        });
+        payments = payments.slice(0, 50);
+        return { ...c, payments };
       })
     );
 

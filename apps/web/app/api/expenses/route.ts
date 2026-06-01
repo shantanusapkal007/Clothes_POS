@@ -29,11 +29,21 @@ export async function GET(request: NextRequest) {
 
     const snapshot = await adminDb.collection("expenses")
       .where("storeId", "==", tenant.storeId)
-      .orderBy("date", "desc")
-      .limit(100)
       .get();
 
-    return NextResponse.json(snapshot.docs.map(doc => mapExpense(doc.data())));
+    let expenses = snapshot.docs.map(doc => mapExpense(doc.data()));
+
+    // Sort descending by date in-memory
+    expenses.sort((a, b) => {
+      const t1 = a.date ? new Date(a.date).getTime() : 0;
+      const t2 = b.date ? new Date(b.date).getTime() : 0;
+      return t2 - t1;
+    });
+
+    // Limit to 100
+    expenses = expenses.slice(0, 100);
+
+    return NextResponse.json(expenses);
   } catch (error) {
     const message = getErrorMessage(error, "Unable to load expenses");
     return NextResponse.json({ message }, { status: getTenantErrorStatus(error, 500) });

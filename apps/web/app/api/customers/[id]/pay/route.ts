@@ -77,10 +77,17 @@ export async function POST(
     const updatedDoc = await customerRef.get();
     const paymentsSnap = await adminDb.collection("payments")
       .where("customerId", "==", params.id)
-      .orderBy("createdAt", "desc")
       .get();
 
-    const result = { ...(updatedDoc.data() as any), payments: paymentsSnap.docs.map(d => d.data()) };
+    const payments = paymentsSnap.docs.map(d => d.data());
+    // Sort in-memory descending by createdAt
+    payments.sort((a, b) => {
+      const t1 = a.createdAt?.toDate ? a.createdAt.toDate().getTime() : (a.createdAt ? new Date(a.createdAt).getTime() : 0);
+      const t2 = b.createdAt?.toDate ? b.createdAt.toDate().getTime() : (b.createdAt ? new Date(b.createdAt).getTime() : 0);
+      return t2 - t1;
+    });
+
+    const result = { ...(updatedDoc.data() as any), payments };
 
     return NextResponse.json({
       id: result.id,

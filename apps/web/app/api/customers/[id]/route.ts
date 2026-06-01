@@ -32,11 +32,17 @@ async function getCustomerWithPayments(customerId: string) {
     adminDb.collection("customers").doc(customerId).get(),
     adminDb.collection("payments")
       .where("customerId", "==", customerId)
-      .orderBy("createdAt", "desc")
       .get()
   ]);
   if (!customerDoc.exists) return null;
-  return { ...(customerDoc.data() as any), payments: paymentsSnap.docs.map(d => d.data()) };
+  const payments = paymentsSnap.docs.map(d => d.data());
+  // Sort in-memory descending by createdAt
+  payments.sort((a, b) => {
+    const t1 = a.createdAt?.toDate ? a.createdAt.toDate().getTime() : (a.createdAt ? new Date(a.createdAt).getTime() : 0);
+    const t2 = b.createdAt?.toDate ? b.createdAt.toDate().getTime() : (b.createdAt ? new Date(b.createdAt).getTime() : 0);
+    return t2 - t1;
+  });
+  return { ...(customerDoc.data() as any), payments };
 }
 
 export async function GET(
