@@ -12,6 +12,7 @@ const NAV_ITEMS = [
   { name: "Reports", href: "/reports", icon: "analytics" },
   { name: "Khata", href: "/khata", icon: "account_balance_wallet" },
   { name: "Inventory", href: "/inventory", icon: "inventory_2" },
+  { name: "Barcodes", href: "/barcodes", icon: "barcode_scanner" },
   { name: "Expenses", href: "/expenses", icon: "receipt_long" },
   { name: "Settings", href: "/settings", icon: "settings" },
 ];
@@ -32,7 +33,7 @@ export function Navigation() {
       setCollapsed(isCollapsed);
       document.documentElement.style.setProperty(
         "--sidebar-w",
-        isCollapsed ? "64px" : "220px"
+        isCollapsed ? "96px" : "256px"
       );
     } catch {
       /* localStorage not available (SSR guard) */
@@ -46,7 +47,7 @@ export function Navigation() {
     } catch { /* ignore */ }
     document.documentElement.style.setProperty(
       "--sidebar-w",
-      collapsed ? "64px" : "220px"
+      collapsed ? "96px" : "256px"
     );
   }, [collapsed]);
 
