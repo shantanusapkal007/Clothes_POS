@@ -214,7 +214,7 @@ export default function ReportsPage() {
   ];
 
   return (
-    <div className="main-content">
+    <div className="main-content app-shell">
       <div className="mx-auto max-w-4xl px-3 py-4 pb-24 md:px-6 md:py-8">
         <div className="mb-8 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <div className="flex flex-col gap-1">

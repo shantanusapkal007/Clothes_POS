@@ -162,7 +162,7 @@ export default function KhataPage() {
   };
 
   return (
-    <div className="main-content min-h-screen bg-slate-50/50">
+    <div className="main-content app-shell min-h-screen bg-slate-50/50">
       <div className="mx-auto max-w-4xl px-4 py-6 pb-32 md:py-10">
         
         {/* Header Section */}

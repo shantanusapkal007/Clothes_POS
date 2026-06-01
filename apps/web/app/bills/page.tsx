@@ -181,7 +181,7 @@ export default function BillsPage() {
   ];
 
   return (
-    <div className="main-content">
+    <div className="main-content app-shell">
       <div className="mx-auto max-w-3xl px-3 py-4 pb-24 md:px-6 md:py-8">
         {/* Header */}
         <div className="mb-4">

@@ -116,7 +116,7 @@ export default function ExpensesPage() {
   const totalExpenses = expenses.reduce((sum, e) => sum + Number(e.amount), 0);
 
   return (
-    <div className="main-content">
+    <div className="main-content app-shell">
       <div className="mx-auto max-w-4xl px-3 py-4 pb-24 md:px-6 md:py-8">
         <div className="mb-6 flex flex-col md:flex-row md:items-end justify-between gap-4">
           <div>
