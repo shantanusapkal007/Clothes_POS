@@ -26,10 +26,12 @@ export async function GET(request: NextRequest) {
 
     const snapshot = await adminDb.collection("suppliers")
       .where("storeId", "==", tenant.storeId)
-      .orderBy("name", "asc")
       .get();
 
     let suppliers = snapshot.docs.map(doc => doc.data());
+
+    // Sort in-memory ascending by name
+    suppliers.sort((a, b) => (a.name || "").localeCompare(b.name || ""));
 
     if (q) {
       suppliers = suppliers.filter(s =>
@@ -43,10 +45,16 @@ export async function GET(request: NextRequest) {
       suppliers.map(async (s) => {
         const purchasesSnap = await adminDb.collection("purchases")
           .where("supplierId", "==", s.id)
-          .orderBy("createdAt", "desc")
-          .limit(10)
           .get();
-        return { ...s, purchases: purchasesSnap.docs.map(d => d.data()) };
+        let purchases = purchasesSnap.docs.map(d => d.data());
+        // Sort in-memory descending by createdAt
+        purchases.sort((x, y) => {
+          const t1 = x.createdAt?.toDate ? x.createdAt.toDate().getTime() : (x.createdAt ? new Date(x.createdAt).getTime() : 0);
+          const t2 = y.createdAt?.toDate ? y.createdAt.toDate().getTime() : (y.createdAt ? new Date(y.createdAt).getTime() : 0);
+          return t2 - t1;
+        });
+        purchases = purchases.slice(0, 10);
+        return { ...s, purchases };
       })
     );
 

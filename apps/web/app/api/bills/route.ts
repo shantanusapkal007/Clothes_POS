@@ -38,10 +38,21 @@ export async function GET(request: NextRequest) {
     
     // In NoSQL, doing complex ranges + sorting + filtering is limited.
     // For this migration, we fetch recent bills and filter in memory.
-    let query = adminDb.collection("bills").where("storeId", "==", tenant.storeId).orderBy("createdAt", "desc").limit(200);
+    const snapshot = await adminDb.collection("bills")
+      .where("storeId", "==", tenant.storeId)
+      .get();
     
-    const snapshot = await query.get();
     let bills = snapshot.docs.map(doc => doc.data());
+
+    // Sort descending by createdAt in-memory
+    bills.sort((a, b) => {
+      const t1 = a.createdAt?.toDate ? a.createdAt.toDate().getTime() : (a.createdAt ? new Date(a.createdAt).getTime() : 0);
+      const t2 = b.createdAt?.toDate ? b.createdAt.toDate().getTime() : (b.createdAt ? new Date(b.createdAt).getTime() : 0);
+      return t2 - t1;
+    });
+
+    // Limit to top 200
+    bills = bills.slice(0, 200);
 
     if (search) {
       bills = bills.filter(b => 
