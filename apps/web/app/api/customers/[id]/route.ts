@@ -1,10 +1,8 @@
-import { Decimal } from "@prisma/client/runtime/library";
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
-import { assertDatabaseConfig } from "../../../../lib/database-url";
 import { getErrorMessage } from "../../../../lib/errors";
-import { prisma } from "../../../../lib/prisma";
 import { getTenantErrorStatus, requireActiveStore } from "../../../../lib/tenant";
+import { adminDb } from "../../../../lib/firebase/server";
 
 export const runtime = "nodejs";
 
@@ -16,35 +14,41 @@ function mapCustomer(c: any) {
     name: c.name,
     phone: c.phone,
     balance: Number(c.balance),
-    createdAt: c.createdAt,
-    updatedAt: c.updatedAt,
+    createdAt: c.createdAt?.toDate ? c.createdAt.toDate() : c.createdAt,
+    updatedAt: c.updatedAt?.toDate ? c.updatedAt.toDate() : c.updatedAt,
     payments: c.payments?.map((p: any) => ({
       id: p.id,
       amount: Number(p.amount),
       method: p.method,
       note: p.note,
       billId: p.billId,
-      createdAt: p.createdAt,
+      createdAt: p.createdAt?.toDate ? p.createdAt.toDate() : p.createdAt,
     })) ?? [],
   };
 }
 
-/* GET /api/customers/[id] */
+async function getCustomerWithPayments(customerId: string) {
+  const [customerDoc, paymentsSnap] = await Promise.all([
+    adminDb.collection("customers").doc(customerId).get(),
+    adminDb.collection("payments")
+      .where("customerId", "==", customerId)
+      .orderBy("createdAt", "desc")
+      .get()
+  ]);
+  if (!customerDoc.exists) return null;
+  return { ...(customerDoc.data() as any), payments: paymentsSnap.docs.map(d => d.data()) };
+}
+
 export async function GET(
   _request: NextRequest,
   context: { params: Promise<{ id: string }> }
 ) {
   try {
-    assertDatabaseConfig();
     const tenant = await requireActiveStore();
     const params = paramsSchema.parse(await context.params);
+    const customer = await getCustomerWithPayments(params.id);
 
-    const customer = await prisma.customer.findFirst({
-      where: { id: params.id, storeId: tenant.storeId },
-      include: { payments: { orderBy: { createdAt: "desc" } } },
-    });
-
-    if (!customer) {
+    if (!customer || customer.storeId !== tenant.storeId) {
       return NextResponse.json({ message: "Customer not found" }, { status: 404 });
     }
 
@@ -55,7 +59,6 @@ export async function GET(
   }
 }
 
-/* PUT /api/customers/[id] — update customer name/phone */
 const updateSchema = z.object({
   name: z.string().min(1).optional(),
   phone: z.string().min(10).optional(),
@@ -66,25 +69,19 @@ export async function PUT(
   context: { params: Promise<{ id: string }> }
 ) {
   try {
-    assertDatabaseConfig();
     const tenant = await requireActiveStore();
     const params = paramsSchema.parse(await context.params);
     const body = updateSchema.parse(await request.json());
 
-    const customer = await prisma.customer.updateMany({
-      where: { id: params.id, storeId: tenant.storeId },
-      data: body,
-    });
+    const customerRef = adminDb.collection("customers").doc(params.id);
+    const existing = await customerRef.get();
 
-    if (customer.count === 0) {
+    if (!existing.exists || existing.data()?.storeId !== tenant.storeId) {
       return NextResponse.json({ message: "Customer not found" }, { status: 404 });
     }
 
-    const updated = await prisma.customer.findFirst({
-      where: { id: params.id },
-      include: { payments: { orderBy: { createdAt: "desc" } } },
-    });
-
+    await customerRef.update({ ...body, updatedAt: new Date() });
+    const updated = await getCustomerWithPayments(params.id);
     return NextResponse.json(mapCustomer(updated));
   } catch (error) {
     const message = getErrorMessage(error, "Unable to update customer");
@@ -92,20 +89,22 @@ export async function PUT(
   }
 }
 
-/* DELETE /api/customers/[id] */
 export async function DELETE(
   _request: NextRequest,
   context: { params: Promise<{ id: string }> }
 ) {
   try {
-    assertDatabaseConfig();
     const tenant = await requireActiveStore();
     const params = paramsSchema.parse(await context.params);
 
-    await prisma.customer.deleteMany({
-      where: { id: params.id, storeId: tenant.storeId },
-    });
+    const customerRef = adminDb.collection("customers").doc(params.id);
+    const existing = await customerRef.get();
 
+    if (!existing.exists || existing.data()?.storeId !== tenant.storeId) {
+      return NextResponse.json({ message: "Customer not found" }, { status: 404 });
+    }
+
+    await customerRef.delete();
     return new NextResponse(null, { status: 204 });
   } catch (error) {
     const message = getErrorMessage(error, "Unable to delete customer");

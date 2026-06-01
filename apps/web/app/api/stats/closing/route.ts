@@ -1,34 +1,27 @@
 import { NextRequest, NextResponse } from "next/server";
-import { prisma } from "../../../../lib/prisma";
 import { requireActiveStore } from "../../../../lib/tenant";
+import { adminDb } from "../../../../lib/firebase/server";
+
+export const runtime = "nodejs";
 
 export async function GET(request: NextRequest) {
   try {
     const tenant = await requireActiveStore();
-    if (!tenant) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
     const today = new Date();
     today.setHours(0, 0, 0, 0);
     const tomorrow = new Date(today);
     tomorrow.setDate(today.getDate() + 1);
 
-    // 1. Sales by Payment Method
-    const bills = await prisma.bill.findMany({
-      where: {
-        storeId: tenant.storeId,
-        createdAt: { gte: today, lt: tomorrow },
-        status: "completed"
-      },
-      select: {
-        finalAmount: true,
-        paymentMethod: true,
-        items: {
-          select: {
-            quantity: true,
-            costPrice: true
-          }
-        }
-      }
+    // Fetch today's completed bills
+    const billsSnap = await adminDb.collection("bills")
+      .where("storeId", "==", tenant.storeId)
+      .where("status", "==", "completed")
+      .get();
+
+    const bills = billsSnap.docs.map(d => d.data()).filter(b => {
+      const createdAt = b.createdAt?.toDate ? b.createdAt.toDate() : new Date(b.createdAt);
+      return createdAt >= today && createdAt < tomorrow;
     });
 
     const summary = {
@@ -41,45 +34,45 @@ export async function GET(request: NextRequest) {
       billCount: bills.length
     };
 
+    const topItemsMap = new Map<string, number>();
+
     bills.forEach(b => {
       const amt = Number(b.finalAmount);
       summary.totalSales += amt;
-      const method = b.paymentMethod.toLowerCase();
+      const method = b.paymentMethod?.toLowerCase();
       if (method === "cash") summary.cash += amt;
       else if (method === "upi") summary.upi += amt;
       else if (method === "card") summary.card += amt;
       else if (method === "credit") summary.credit += amt;
 
-      // Calculate gross profit for this bill
-      const cost = b.items.reduce((s, item) => s + (Number(item.quantity) * Number(item.costPrice)), 0);
-      summary.grossProfit += (amt - cost);
+      if (b.items && Array.isArray(b.items)) {
+        const cost = b.items.reduce((s: number, item: any) => s + (Number(item.quantity) * Number(item.costPrice || 0)), 0);
+        summary.grossProfit += (amt - cost);
+
+        b.items.forEach((item: any) => {
+          topItemsMap.set(item.productName, (topItemsMap.get(item.productName) || 0) + Number(item.quantity));
+        });
+      }
     });
 
-    // 2. Expenses
-    const expenses = await prisma.expense.aggregate({
-      where: {
-        storeId: tenant.storeId,
-        date: { gte: today, lt: tomorrow }
-      },
-      _sum: { amount: true }
+    // Today's expenses
+    const expensesSnap = await adminDb.collection("expenses")
+      .where("storeId", "==", tenant.storeId)
+      .get();
+
+    const todayExpenses = expensesSnap.docs.map(d => d.data()).filter(e => {
+      const date = e.date?.toDate ? e.date.toDate() : new Date(e.date);
+      return date >= today && date < tomorrow;
     });
 
-    const totalExpenses = Number(expenses._sum.amount || 0);
+    const totalExpenses = todayExpenses.reduce((sum, e) => sum + Number(e.amount), 0);
     const netProfit = summary.grossProfit - totalExpenses;
-    const cashInHand = summary.cash; // Assuming expenses aren't always paid from cash, but for simple POS, it's often the case.
-    
-    // 3. Top Items
-    const topItems = await prisma.billItem.groupBy({
-      by: ["productName"],
-      where: {
-        storeId: tenant.storeId,
-        createdAt: { gte: today, lt: tomorrow },
-        bill: { status: "completed" }
-      },
-      _sum: { quantity: true },
-      orderBy: { _sum: { quantity: "desc" } },
-      take: 3
-    });
+    const cashInHand = summary.cash;
+
+    const topItems = Array.from(topItemsMap.entries())
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 3)
+      .map(([name, qty]) => ({ name, qty }));
 
     return NextResponse.json({
       date: today.toISOString().split("T")[0],
@@ -87,7 +80,7 @@ export async function GET(request: NextRequest) {
       totalExpenses,
       netProfit,
       cashInHand,
-      topItems: topItems.map(i => ({ name: i.productName, qty: i._sum.quantity }))
+      topItems
     });
   } catch (error) {
     console.error("Z-Report Error:", error);

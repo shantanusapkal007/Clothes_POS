@@ -1,4 +1,3 @@
-import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 
 const PUBLIC_FILE = /\.(.*)$/;
@@ -7,7 +6,8 @@ function isPublicPath(pathname: string) {
   return (
     pathname === "/login" ||
     pathname === "/api/health" ||
-    pathname.startsWith("/auth/") ||
+    pathname === "/api/auth/session" ||
+    pathname === "/api/auth/logout" ||
     pathname.startsWith("/_next/") ||
     pathname.startsWith("/icons/") ||
     pathname === "/manifest.webmanifest" ||
@@ -18,37 +18,11 @@ function isPublicPath(pathname: string) {
 }
 
 export async function middleware(request: NextRequest) {
-  let response = NextResponse.next({ request });
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
-
-  if (!supabaseUrl || !supabaseAnonKey) {
-    return response;
-  }
-
-  const supabase = createServerClient(supabaseUrl, supabaseAnonKey, {
-    cookies: {
-      getAll() {
-        return request.cookies.getAll();
-      },
-      setAll(cookiesToSet) {
-        cookiesToSet.forEach(({ name, value }) => request.cookies.set(name, value));
-        response = NextResponse.next({ request });
-        cookiesToSet.forEach(({ name, value, options }) =>
-          response.cookies.set(name, value, options)
-        );
-      }
-    }
-  });
-
-  const {
-    data: { user }
-  } = await supabase.auth.getUser();
-
+  const session = request.cookies.get("session")?.value;
   const { pathname } = request.nextUrl;
   const isApi = pathname.startsWith("/api/");
 
-  if (!user && !isPublicPath(pathname)) {
+  if (!session && !isPublicPath(pathname)) {
     if (isApi) {
       return NextResponse.json({ message: "Please sign in to continue." }, { status: 401 });
     }
@@ -59,14 +33,14 @@ export async function middleware(request: NextRequest) {
     return NextResponse.redirect(loginUrl);
   }
 
-  if (user && pathname === "/login") {
+  if (session && pathname === "/login") {
     const homeUrl = request.nextUrl.clone();
     homeUrl.pathname = "/";
     homeUrl.search = "";
     return NextResponse.redirect(homeUrl);
   }
 
-  return response;
+  return NextResponse.next();
 }
 
 export const config = {

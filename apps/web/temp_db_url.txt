@@ -1,1 +1,0 @@
-postgresql://postgres:02402556168Sh@!@db.ebtxozjiwjifmhsmcqzw.supabase.co:6543/clothes

@@ -1,4 +1,3 @@
-import { Decimal } from "@prisma/client/runtime/library";
 import { z } from "zod";
 import type { FastifyPluginAsync } from "fastify";
 import { calculateCheckout } from "../lib/billing.js";
@@ -22,6 +21,7 @@ const checkoutSchema = z.object({
   customerName: z.string().optional(),
   customerPhone: z.string().optional()
 });
+
 const tenantHeadersSchema = z.object({
   "x-organization-id": z.string().min(1),
   "x-store-id": z.string().min(1),
@@ -32,42 +32,20 @@ function getTenant(headers: unknown) {
   return tenantHeadersSchema.parse(headers);
 }
 
-const mapBill = (bill: {
-  id: string;
-  totalAmount: Decimal;
-  discountAmount: Decimal;
-  taxAmount: Decimal;
-  finalAmount: Decimal;
-  paymentMethod: string;
-  createdAt: Date;
-  customerName?: string | null;
-  customerPhone?: string | null;
-  billDiscountPercent?: Decimal;
-  billManualDiscountAmount?: Decimal;
-  items?: Array<{
-    id: string;
-    productId: string;
-    quantity: number;
-    price: Decimal;
-    discount: Decimal;
-    tax: Decimal;
-    total: Decimal;
-    productName: string;
-  }>;
-}) => ({
-  id: bill.id,
-  totalAmount: Number(bill.totalAmount),
-  discountAmount: Number(bill.discountAmount),
-  taxAmount: Number(bill.taxAmount),
-  finalAmount: Number(bill.finalAmount),
-  paymentMethod: bill.paymentMethod,
-  createdAt: bill.createdAt,
-  customerName: bill.customerName ?? undefined,
-  customerPhone: bill.customerPhone ?? undefined,
-  billDiscountPercent: bill.billDiscountPercent ? Number(bill.billDiscountPercent) : 0,
-  billManualDiscountAmount: bill.billManualDiscountAmount ? Number(bill.billManualDiscountAmount) : 0,
-  items:
-    bill.items?.map((item) => ({
+function mapBill(bill: any) {
+  return {
+    id: bill.id,
+    totalAmount: Number(bill.totalAmount),
+    discountAmount: Number(bill.discountAmount),
+    taxAmount: Number(bill.taxAmount),
+    finalAmount: Number(bill.finalAmount),
+    paymentMethod: bill.paymentMethod,
+    createdAt: bill.createdAt?.toDate ? bill.createdAt.toDate() : bill.createdAt,
+    customerName: bill.customerName ?? undefined,
+    customerPhone: bill.customerPhone ?? undefined,
+    billDiscountPercent: Number(bill.billDiscountPercent || 0),
+    billManualDiscountAmount: Number(bill.billManualDiscountAmount || 0),
+    items: bill.items?.map((item: any) => ({
       id: item.id,
       productId: item.productId,
       quantity: item.quantity,
@@ -77,69 +55,37 @@ const mapBill = (bill: {
       total: Number(item.total),
       productName: item.productName
     })) ?? []
-});
+  };
+}
 
 const billRoutes: FastifyPluginAsync = async (fastify) => {
   fastify.get("/", async (request) => {
     const tenant = getTenant(request.headers);
-    const bills = await fastify.prisma.bill.findMany({
-      where: {
-        storeId: tenant["x-store-id"]
-      },
-      include: { items: true },
-      orderBy: {
-        createdAt: "desc"
-      }
-    });
 
-    return bills.map(mapBill);
+    const snapshot = await fastify.db.collection("bills")
+      .where("storeId", "==", tenant["x-store-id"])
+      .orderBy("createdAt", "desc")
+      .get();
+
+    return snapshot.docs.map(d => mapBill(d.data()));
   });
 
   fastify.get("/:id", async (request, reply) => {
     const tenant = getTenant(request.headers);
     const params = z.object({ id: z.string().min(1) }).parse(request.params);
-    const bill = await fastify.prisma.bill.findFirst({
-      where: {
-        id: params.id,
-        storeId: tenant["x-store-id"]
-      },
-      include: { items: true }
-    });
 
-    if (!bill) {
+    const billDoc = await fastify.db.collection("bills").doc(params.id).get();
+
+    if (!billDoc.exists || billDoc.data()?.storeId !== tenant["x-store-id"]) {
       return reply.code(404).send({ message: "Bill not found" });
     }
 
-    return mapBill(bill);
+    return mapBill(billDoc.data());
   });
 
   fastify.post("/", async (request, reply) => {
     const tenant = getTenant(request.headers);
     const body = checkoutSchema.parse(request.body);
-    const productIds = body.items.map((item) => item.productId);
-    const products = await fastify.prisma.product.findMany({
-      where: {
-        storeId: tenant["x-store-id"],
-        id: {
-          in: productIds
-        }
-      }
-    });
-
-    const productMap = new Map(products.map((product) => [product.id, product]));
-
-    for (const item of body.items) {
-      const product = productMap.get(item.productId);
-      if (!product) {
-        return reply.code(400).send({ message: `Product missing: ${item.productId}` });
-      }
-
-      if (product.stock < item.quantity) {
-        return reply.code(400).send({
-          message: `Not enough stock for ${product.name}`
-        });
-      }
-    }
 
     const summary = calculateCheckout(
       body.items,
@@ -147,115 +93,118 @@ const billRoutes: FastifyPluginAsync = async (fastify) => {
       body.billManualDiscountAmount
     );
 
-    const bill = await fastify.prisma.$transaction(async (tx) => {
-      const createdBill = await tx.bill.create({
-        data: {
-          organizationId: tenant["x-organization-id"],
-          storeId: tenant["x-store-id"],
-          cashierUserId: tenant["x-user-id"] ?? null,
-          totalAmount: new Decimal(summary.totalAmount),
-          discountAmount: new Decimal(summary.discountAmount),
-          taxAmount: new Decimal(summary.taxAmount),
-          finalAmount: new Decimal(summary.finalAmount),
-          billDiscountPercent: new Decimal(body.billDiscountPercent ?? 0),
-          billManualDiscountAmount: new Decimal(body.billManualDiscountAmount ?? 0),
-          paymentMethod: body.paymentMethod,
-          customerName: body.customerName ?? null,
-          customerPhone: body.customerPhone ?? null
-        }
-      });
+    const billRef = fastify.db.collection("bills").doc();
+    const createdBillData: Record<string, any> = {};
 
-      // Seamless Khata Integration
+    await fastify.db.runTransaction(async (tx) => {
+      // Read all products
+      const productRefs = body.items.map(item => fastify.db.collection("products").doc(item.productId));
+      const productDocs = await Promise.all(productRefs.map(ref => tx.get(ref)));
+
+      const productMap = new Map();
+      for (const doc of productDocs) {
+        if (!doc.exists) throw new Error(`Product missing: ${doc.id}`);
+        productMap.set(doc.id, doc.data());
+      }
+
+      for (const item of body.items) {
+        const product = productMap.get(item.productId);
+        if (product.stock < item.quantity) throw new Error(`Not enough stock for ${product.name}`);
+      }
+
+      let customerRef = null;
+      let customerDoc = null;
+
       if (body.paymentMethod === "credit" && body.customerPhone) {
-        // Find or create customer
-        let customer = await tx.customer.findUnique({
-          where: {
-            storeId_phone: {
-              storeId: tenant["x-store-id"],
-              phone: body.customerPhone
-            }
-          }
-        });
+        const customerQuery = await fastify.db.collection("customers")
+          .where("storeId", "==", tenant["x-store-id"])
+          .where("phone", "==", body.customerPhone)
+          .limit(1)
+          .get();
 
-        if (!customer && body.customerName) {
-          customer = await tx.customer.create({
-            data: {
-              organizationId: tenant["x-organization-id"],
-              storeId: tenant["x-store-id"],
-              name: body.customerName,
-              phone: body.customerPhone,
-              balance: 0
-            }
-          });
-        }
-
-        if (customer) {
-          // Update balance
-          await tx.customer.update({
-            where: { id: customer.id },
-            data: {
-              balance: {
-                increment: new Decimal(summary.finalAmount)
-              }
-            }
-          });
-
-          // Create ledger entry
-          await tx.ledgerEntry.create({
-            data: {
-              organizationId: tenant["x-organization-id"],
-              storeId: tenant["x-store-id"],
-              customerId: customer.id,
-              amount: new Decimal(summary.finalAmount),
-              type: "credit",
-              note: `Bill #${createdBill.id.slice(-6).toUpperCase()}`
-            }
-          });
+        if (!customerQuery.empty) {
+          customerRef = customerQuery.docs[0].ref;
+          customerDoc = await tx.get(customerRef);
+        } else if (body.customerName) {
+          customerRef = fastify.db.collection("customers").doc();
         }
       }
 
-      for (const item of summary.items) {
-        const product = productMap.get(item.productId)!;
-
-        await tx.billItem.create({
-          data: {
-            organizationId: tenant["x-organization-id"],
-            storeId: tenant["x-store-id"],
-            billId: createdBill.id,
+      Object.assign(createdBillData, {
+        id: billRef.id,
+        organizationId: tenant["x-organization-id"],
+        storeId: tenant["x-store-id"],
+        cashierUserId: tenant["x-user-id"] ?? null,
+        totalAmount: summary.totalAmount,
+        discountAmount: summary.discountAmount,
+        taxAmount: summary.taxAmount,
+        finalAmount: summary.finalAmount,
+        billDiscountPercent: body.billDiscountPercent ?? 0,
+        billManualDiscountAmount: body.billManualDiscountAmount ?? 0,
+        paymentMethod: body.paymentMethod,
+        customerName: body.customerName ?? null,
+        customerPhone: body.customerPhone ?? null,
+        status: "completed",
+        items: summary.items.map(item => {
+          const p = productMap.get(item.productId);
+          return {
+            id: fastify.db.collection("bills").doc().id,
             productId: item.productId,
             quantity: item.quantity,
-            price: new Decimal(item.price),
-            discount: new Decimal(item.discountAmount),
-            tax: new Decimal(item.taxAmount),
-            total: new Decimal(item.total),
-            productName: product.name
-          }
-        });
+            price: item.price,
+            costPrice: p.costPrice,
+            discount: item.discountAmount,
+            tax: item.taxAmount,
+            total: item.total,
+            productName: p.name
+          };
+        }),
+        createdAt: new Date()
+      });
 
-        await tx.product.update({
-          where: { id: item.productId },
-          data: {
-            stock: {
-              decrement: item.quantity
-            }
-          }
-        });
+      tx.set(billRef, createdBillData);
+
+      for (const item of summary.items) {
+        const pRef = fastify.db.collection("products").doc(item.productId);
+        const pData = productMap.get(item.productId);
+        tx.update(pRef, { stock: pData.stock - item.quantity });
       }
 
-      return tx.bill.findUniqueOrThrow({
-        where: {
-          id: createdBill.id
-        },
-        include: {
-          items: true
+      if (customerRef) {
+        if (customerDoc && customerDoc.exists) {
+          tx.update(customerRef, {
+            balance: customerDoc.data()?.balance + summary.finalAmount,
+            updatedAt: new Date()
+          });
+        } else if (body.customerName) {
+          tx.set(customerRef, {
+            id: customerRef.id,
+            organizationId: tenant["x-organization-id"],
+            storeId: tenant["x-store-id"],
+            name: body.customerName,
+            phone: body.customerPhone,
+            balance: summary.finalAmount,
+            createdAt: new Date(),
+            updatedAt: new Date()
+          });
         }
-      });
+
+        const ledgerRef = fastify.db.collection("ledgerEntries").doc();
+        tx.set(ledgerRef, {
+          id: ledgerRef.id,
+          organizationId: tenant["x-organization-id"],
+          storeId: tenant["x-store-id"],
+          customerId: customerRef.id,
+          amount: summary.finalAmount,
+          type: "credit",
+          note: `Bill #${createdBillData.id.slice(-6).toUpperCase()}`,
+          date: new Date(),
+          createdAt: new Date()
+        });
+      }
     });
 
-    return reply.code(201).send({
-      ...mapBill(bill),
-      summary
-    });
+    return reply.code(201).send({ ...mapBill(createdBillData), summary });
   });
 };
 

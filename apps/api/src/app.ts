@@ -2,7 +2,7 @@ import Fastify from "fastify";
 import cors from "@fastify/cors";
 import sensible from "@fastify/sensible";
 import { ZodError } from "zod";
-import prismaPlugin from "./plugins/prisma.js";
+import firebasePlugin from "./plugins/firebase.js";
 import productRoutes from "./routes/products.js";
 import billRoutes from "./routes/bills.js";
 
@@ -15,7 +15,7 @@ export function buildApp() {
     origin: true
   });
   app.register(sensible);
-  app.register(prismaPlugin);
+  app.register(firebasePlugin);
 
   app.setErrorHandler((error, _request, reply) => {
     app.log.error(error);

@@ -3,7 +3,8 @@
 import { Suspense } from "react";
 import { useState, type FormEvent } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { createSupabaseBrowserClient } from "../../lib/supabase/client";
+import { signInWithEmailAndPassword, createUserWithEmailAndPassword } from "firebase/auth";
+import { auth } from "../../lib/firebase/client";
 
 function LoginForm() {
   const router = useRouter();
@@ -31,29 +32,23 @@ function LoginForm() {
     }
 
     try {
-      const supabase = createSupabaseBrowserClient();
-      const result =
-        mode === "signin"
-          ? await supabase.auth.signInWithPassword({ email, password })
-          : await supabase.auth.signUp({
-              email,
-              password,
-              options: {
-                emailRedirectTo:
-                  typeof window !== "undefined"
-                    ? `${window.location.origin}/auth/callback`
-                    : undefined
-              }
-            });
-
-      if (result.error) {
-        setError(result.error.message);
-        return;
+      let userCredential;
+      if (mode === "signin") {
+        userCredential = await signInWithEmailAndPassword(auth, email, password);
+      } else {
+        userCredential = await createUserWithEmailAndPassword(auth, email, password);
       }
 
-      if (mode === "signup" && !result.data.session) {
-        setMessage("Check your email to confirm your account, then sign in.");
-        return;
+      // Get ID token to create session cookie
+      const idToken = await userCredential.user.getIdToken();
+      const sessionResponse = await fetch('/api/auth/session', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ idToken })
+      });
+
+      if (!sessionResponse.ok) {
+        throw new Error("Failed to create session.");
       }
 
       router.replace(nextPath);

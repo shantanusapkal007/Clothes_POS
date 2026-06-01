@@ -1,10 +1,8 @@
-import { Decimal } from "@prisma/client/runtime/library";
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
-import { assertDatabaseConfig } from "../../../lib/database-url";
 import { getErrorMessage } from "../../../lib/errors";
-import { prisma } from "../../../lib/prisma";
 import { getTenantErrorStatus, requireActiveStore } from "../../../lib/tenant";
+import { adminDb } from "../../../lib/firebase/server";
 
 export const runtime = "nodejs";
 
@@ -15,21 +13,27 @@ const createSchema = z.object({
   date: z.string().optional(),
 });
 
+function mapExpense(e: any) {
+  return {
+    ...e,
+    amount: Number(e.amount),
+    date: e.date?.toDate ? e.date.toDate() : e.date,
+    createdAt: e.createdAt?.toDate ? e.createdAt.toDate() : e.createdAt,
+    updatedAt: e.updatedAt?.toDate ? e.updatedAt.toDate() : e.updatedAt,
+  };
+}
+
 export async function GET(request: NextRequest) {
   try {
-    assertDatabaseConfig();
     const tenant = await requireActiveStore();
-    
-    const expenses = await prisma.expense.findMany({
-      where: { storeId: tenant.storeId },
-      orderBy: { date: "desc" },
-      take: 100, // Limit for recent expenses initially
-    });
 
-    return NextResponse.json(expenses.map(e => ({
-      ...e,
-      amount: Number(e.amount),
-    })));
+    const snapshot = await adminDb.collection("expenses")
+      .where("storeId", "==", tenant.storeId)
+      .orderBy("date", "desc")
+      .limit(100)
+      .get();
+
+    return NextResponse.json(snapshot.docs.map(doc => mapExpense(doc.data())));
   } catch (error) {
     const message = getErrorMessage(error, "Unable to load expenses");
     return NextResponse.json({ message }, { status: getTenantErrorStatus(error, 500) });
@@ -38,25 +42,24 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   try {
-    assertDatabaseConfig();
     const tenant = await requireActiveStore();
     const body = createSchema.parse(await request.json());
 
-    const expense = await prisma.expense.create({
-      data: {
-        organizationId: tenant.organizationId,
-        storeId: tenant.storeId,
-        amount: new Decimal(body.amount),
-        category: body.category,
-        description: body.description || null,
-        date: body.date ? new Date(body.date) : new Date(),
-      },
-    });
+    const expenseRef = adminDb.collection("expenses").doc();
+    const newExpense = {
+      id: expenseRef.id,
+      organizationId: tenant.organizationId,
+      storeId: tenant.storeId,
+      amount: body.amount,
+      category: body.category,
+      description: body.description || null,
+      date: body.date ? new Date(body.date) : new Date(),
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    };
 
-    return NextResponse.json({
-      ...expense,
-      amount: Number(expense.amount),
-    }, { status: 201 });
+    await expenseRef.set(newExpense);
+    return NextResponse.json(mapExpense(newExpense), { status: 201 });
   } catch (error) {
     const message = getErrorMessage(error, "Unable to create expense");
     return NextResponse.json({ message }, { status: getTenantErrorStatus(error, 400) });

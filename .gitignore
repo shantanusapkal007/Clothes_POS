@@ -5,10 +5,9 @@ dist
 .env.local
 .env.*.local
 .env.vercel*
+serviceAccountKey.json
 apps/api/prisma/dev.db
 apps/api/prisma/dev.db-journal
 coverage
 npm-debug.log*
-
-.vercel
-
+.claude

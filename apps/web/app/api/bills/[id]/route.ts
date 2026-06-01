@@ -1,10 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
-import { assertDatabaseConfig } from "../../../../lib/database-url";
 import { getErrorMessage } from "../../../../lib/errors";
-import { prisma } from "../../../../lib/prisma";
 import { mapBill } from "../../../../lib/server-mappers";
 import { getTenantErrorStatus, requireActiveStore } from "../../../../lib/tenant";
+import { adminDb } from "../../../../lib/firebase/server";
 
 export const runtime = "nodejs";
 
@@ -17,19 +16,16 @@ export async function GET(
   context: { params: Promise<{ id: string }> }
 ) {
   try {
-    assertDatabaseConfig();
     const tenant = await requireActiveStore();
     const params = paramsSchema.parse(await context.params);
-    const bill = await prisma.bill.findFirst({
-      where: { id: params.id, storeId: tenant.storeId },
-      include: { items: true, refunds: true }
-    });
 
-    if (!bill) {
+    const billDoc = await adminDb.collection("bills").doc(params.id).get();
+
+    if (!billDoc.exists || billDoc.data()?.storeId !== tenant.storeId) {
       return NextResponse.json({ message: "Bill not found" }, { status: 404 });
     }
 
-    return NextResponse.json(mapBill(bill));
+    return NextResponse.json(mapBill(billDoc.data()));
   } catch (error) {
     const message = getErrorMessage(error, "Unable to load bill");
     return NextResponse.json({ message }, { status: getTenantErrorStatus(error, 500) });

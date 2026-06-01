@@ -1,13 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
-import { prisma } from "../../../../../lib/prisma";
 import { requireActiveStore } from "../../../../../lib/tenant";
-import { Decimal } from "@prisma/client/runtime/library";
+import { adminDb } from "../../../../../lib/firebase/server";
+
+export const runtime = "nodejs";
 
 export async function POST(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
     const tenant = await requireActiveStore();
-    if (!tenant) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-
     const resolvedParams = await params;
     const supplierId = resolvedParams.id;
     const body = await request.json();
@@ -17,31 +16,35 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
       return NextResponse.json({ error: "Invalid amount" }, { status: 400 });
     }
 
-    // Use a transaction to create purchase and update supplier balance
-    const purchase = await prisma.$transaction(async (tx) => {
-      const p = await tx.purchase.create({
-        data: {
-          organizationId: tenant.organizationId,
-          storeId: tenant.storeId,
-          supplierId,
-          amount: new Decimal(amount),
-          note
-        }
-      });
+    const supplierRef = adminDb.collection("suppliers").doc(supplierId);
+    const supplierDoc = await supplierRef.get();
 
-      await tx.supplier.update({
-        where: { id: supplierId },
-        data: {
-          balance: {
-            increment: new Decimal(amount)
-          }
-        }
-      });
+    if (!supplierDoc.exists || supplierDoc.data()?.storeId !== tenant.storeId) {
+      return NextResponse.json({ error: "Supplier not found" }, { status: 404 });
+    }
 
-      return p;
+    const currentBalance = Number(supplierDoc.data()?.balance || 0);
+    const purchaseRef = adminDb.collection("purchases").doc();
+    const newPurchase = {
+      id: purchaseRef.id,
+      organizationId: tenant.organizationId,
+      storeId: tenant.storeId,
+      supplierId,
+      amount: Number(amount),
+      status: "completed",
+      note: note || null,
+      createdAt: new Date(),
+    };
+
+    await adminDb.runTransaction(async (tx) => {
+      tx.set(purchaseRef, newPurchase);
+      tx.update(supplierRef, {
+        balance: currentBalance + Number(amount),
+        updatedAt: new Date()
+      });
     });
 
-    return NextResponse.json(purchase);
+    return NextResponse.json({ ...newPurchase, amount: Number(newPurchase.amount) });
   } catch (error) {
     console.error("POST Purchase Error:", error);
     return NextResponse.json({ error: "Server Error" }, { status: 500 });

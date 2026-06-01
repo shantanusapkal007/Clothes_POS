@@ -79,8 +79,9 @@
   /* ─── App Shell ─── */
   .app-shell {
     @apply flex min-h-screen flex-col bg-background;
-    /* Mobile: bottom tab bar + safe area */
-    padding-bottom: calc(3.75rem + env(safe-area-inset-bottom, 0px));
+    /* Mobile Layout: Fixed top header of 3.5rem */
+    padding-top: 3.5rem;
+    padding-bottom: 0;
   }
 
   .main-content {
@@ -91,6 +92,7 @@
   /* Desktop layout adjustment */
   @media (min-width: 768px) {
     .app-shell {
+      padding-top: 0;
       padding-bottom: 0;
     }
     
@@ -101,17 +103,8 @@
 
   .pos-shell {
     @apply flex flex-1 flex-col overflow-hidden bg-slate-50/50;
-    /* On mobile, pos-shell should fill the screen minus the bottom tab bar */
-    height: calc(100dvh - 3.75rem - env(safe-area-inset-bottom, 0px));
-  }
-
-  /* Adjust when global top bar is present (on other pages) */
-  .has-top-bar .app-shell {
-    padding-top: 3.5rem;
-  }
-  
-  .has-top-bar .pos-shell {
-    height: calc(100dvh - 6.75rem - env(safe-area-inset-bottom, 0px));
+    /* Mobile: Full height minus top bar (3.5rem) */
+    height: calc(100dvh - 3.5rem - env(safe-area-inset-bottom, 0px));
   }
 
   @media (min-width: 768px) {

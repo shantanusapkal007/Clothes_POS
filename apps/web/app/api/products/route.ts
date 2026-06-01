@@ -1,11 +1,9 @@
-import { Decimal } from "@prisma/client/runtime/library";
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
-import { assertDatabaseConfig } from "../../../lib/database-url";
 import { getApiErrorStatus, getErrorMessage } from "../../../lib/errors";
-import { prisma } from "../../../lib/prisma";
 import { mapProduct } from "../../../lib/server-mappers";
 import { getTenantErrorStatus, requireActiveStore } from "../../../lib/tenant";
+import { adminDb } from "../../../lib/firebase/server";
 
 export const runtime = "nodejs";
 
@@ -23,49 +21,35 @@ const productSchema = z.object({
 
 export async function GET(request: NextRequest) {
   try {
-    assertDatabaseConfig();
     const tenant = await requireActiveStore();
-    const search = request.nextUrl.searchParams.get("search")?.trim();
+    const search = request.nextUrl.searchParams.get("search")?.trim().toLowerCase();
+
+    // Note: Firestore doesn't support complex OR queries with full text search or skip/take pagination easily.
+    // For this migration, we fetch the products for the store, sort them, and filter in-memory if there is a search term.
+    
+    let query = adminDb.collection("products").where("storeId", "==", tenant.storeId);
+    
+    const snapshot = await query.get();
+    let products = snapshot.docs.map(doc => doc.data());
+    
+    products.sort((a, b) => b.updatedAt?.toDate() - a.updatedAt?.toDate());
+
+    if (search) {
+      products = products.filter(p => 
+        (p.name?.toLowerCase().includes(search)) ||
+        (p.category?.toLowerCase().includes(search)) ||
+        (p.barcode?.toLowerCase().includes(search))
+      );
+    }
 
     const page = parseInt(request.nextUrl.searchParams.get("page") ?? "1", 10);
-      const pageSize = parseInt(request.nextUrl.searchParams.get("pageSize") ?? "20", 10);
-      const skip = (page - 1) * pageSize;
+    const pageSize = parseInt(request.nextUrl.searchParams.get("pageSize") ?? "20", 10);
+    const skip = (page - 1) * pageSize;
+    
+    const totalCount = products.length;
+    const paginatedProducts = products.slice(skip, skip + pageSize);
 
-      const [products, totalCount] = await Promise.all([
-        prisma.product.findMany({
-          where: {
-            storeId: tenant.storeId,
-            ...(search
-              ? {
-                  OR: [
-                    { name: { contains: search, mode: "insensitive" } },
-                    { category: { contains: search, mode: "insensitive" } },
-                    { barcode: { contains: search, mode: "insensitive" } },
-                  ],
-                }
-              : {}),
-          },
-          orderBy: { updatedAt: "desc" },
-          skip,
-          take: pageSize,
-        }),
-        prisma.product.count({
-          where: {
-            storeId: tenant.storeId,
-            ...(search
-              ? {
-                  OR: [
-                    { name: { contains: search, mode: "insensitive" } },
-                    { category: { contains: search, mode: "insensitive" } },
-                    { barcode: { contains: search, mode: "insensitive" } },
-                  ],
-                }
-              : {}),
-          },
-        }),
-      ]);
-
-      return NextResponse.json({ items: products.map(mapProduct), totalCount });
+    return NextResponse.json({ items: paginatedProducts.map(mapProduct), totalCount });
   } catch (error) {
     const message = getErrorMessage(error, "Unable to load products");
     return NextResponse.json({ message }, { status: getTenantErrorStatus(error, 500) });
@@ -74,26 +58,30 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   try {
-    assertDatabaseConfig();
     const tenant = await requireActiveStore();
     const body = productSchema.parse(await request.json());
-    const product = await prisma.product.create({
-      data: {
-        organizationId: tenant.organizationId,
-        storeId: tenant.storeId,
-        name: body.name,
-        category: body.category ?? null,
-        barcode: body.barcode || null,
-        price: new Decimal(body.price),
-        costPrice: new Decimal(body.costPrice),
-        discountPercent: new Decimal(body.discountPercent),
-        taxPercent: new Decimal(body.taxPercent),
-        stock: body.stock,
-        minStock: body.minStock
-      }
-    });
+    
+    const productRef = adminDb.collection("products").doc();
+    const newProduct = {
+      id: productRef.id,
+      organizationId: tenant.organizationId,
+      storeId: tenant.storeId,
+      name: body.name,
+      category: body.category ?? null,
+      barcode: body.barcode || null,
+      price: body.price,
+      costPrice: body.costPrice,
+      discountPercent: body.discountPercent,
+      taxPercent: body.taxPercent,
+      stock: body.stock,
+      minStock: body.minStock,
+      createdAt: new Date(),
+      updatedAt: new Date()
+    };
 
-    return NextResponse.json(mapProduct(product), { status: 201 });
+    await productRef.set(newProduct);
+
+    return NextResponse.json(mapProduct(newProduct), { status: 201 });
   } catch (error) {
     const message = getErrorMessage(error, "Unable to create product");
     return NextResponse.json({ message }, { status: getTenantErrorStatus(error, getApiErrorStatus(error, 400)) });

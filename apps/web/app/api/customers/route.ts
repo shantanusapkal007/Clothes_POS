@@ -1,10 +1,8 @@
-import { Decimal } from "@prisma/client/runtime/library";
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
-import { assertDatabaseConfig } from "../../../lib/database-url";
 import { getErrorMessage } from "../../../lib/errors";
-import { prisma } from "../../../lib/prisma";
 import { getTenantErrorStatus, requireActiveStore } from "../../../lib/tenant";
+import { adminDb } from "../../../lib/firebase/server";
 
 export const runtime = "nodejs";
 
@@ -14,15 +12,15 @@ function mapCustomer(c: any) {
     name: c.name,
     phone: c.phone,
     balance: Number(c.balance),
-    createdAt: c.createdAt,
-    updatedAt: c.updatedAt,
+    createdAt: c.createdAt?.toDate ? c.createdAt.toDate() : c.createdAt,
+    updatedAt: c.updatedAt?.toDate ? c.updatedAt.toDate() : c.updatedAt,
     payments: c.payments?.map((p: any) => ({
       id: p.id,
       amount: Number(p.amount),
       method: p.method,
       note: p.note,
       billId: p.billId,
-      createdAt: p.createdAt,
+      createdAt: p.createdAt?.toDate ? p.createdAt.toDate() : p.createdAt,
     })) ?? [],
   };
 }
@@ -33,58 +31,76 @@ const createSchema = z.object({
   balance: z.coerce.number().min(0).default(0),
 });
 
-/* GET /api/customers — list all customers for this store */
 export async function GET(request: NextRequest) {
   try {
-    assertDatabaseConfig();
     const tenant = await requireActiveStore();
     const url = new URL(request.url);
-    const search = url.searchParams.get("search")?.trim() || "";
+    const search = url.searchParams.get("search")?.trim().toLowerCase() || "";
 
-    const where: any = { storeId: tenant.storeId };
+    const snapshot = await adminDb.collection("customers")
+      .where("storeId", "==", tenant.storeId)
+      .orderBy("updatedAt", "desc")
+      .get();
+
+    let customers = snapshot.docs.map(doc => doc.data());
+
     if (search) {
-      where.OR = [
-        { name: { contains: search, mode: "insensitive" } },
-        { phone: { contains: search } },
-      ];
+      customers = customers.filter(c =>
+        c.name?.toLowerCase().includes(search) ||
+        c.phone?.includes(search)
+      );
     }
 
-    const customers = await prisma.customer.findMany({
-      where,
-      include: { payments: { orderBy: { createdAt: "desc" }, take: 50 } },
-      orderBy: { updatedAt: "desc" },
-    });
+    // Fetch payments for each customer
+    const customersWithPayments = await Promise.all(
+      customers.map(async (c) => {
+        const paymentsSnap = await adminDb.collection("payments")
+          .where("customerId", "==", c.id)
+          .orderBy("createdAt", "desc")
+          .limit(50)
+          .get();
+        return { ...c, payments: paymentsSnap.docs.map(d => d.data()) };
+      })
+    );
 
-    return NextResponse.json(customers.map(mapCustomer));
+    return NextResponse.json(customersWithPayments.map(mapCustomer));
   } catch (error) {
     const message = getErrorMessage(error, "Unable to load customers");
     return NextResponse.json({ message }, { status: getTenantErrorStatus(error, 500) });
   }
 }
 
-/* POST /api/customers — create a new customer */
 export async function POST(request: NextRequest) {
   try {
-    assertDatabaseConfig();
     const tenant = await requireActiveStore();
     const body = createSchema.parse(await request.json());
 
-    const customer = await prisma.customer.create({
-      data: {
-        organizationId: tenant.organizationId,
-        storeId: tenant.storeId,
-        name: body.name,
-        phone: body.phone,
-        balance: new Decimal(body.balance),
-      },
-      include: { payments: true },
-    });
+    // Check for duplicate phone
+    const existing = await adminDb.collection("customers")
+      .where("storeId", "==", tenant.storeId)
+      .where("phone", "==", body.phone)
+      .limit(1)
+      .get();
 
-    return NextResponse.json(mapCustomer(customer), { status: 201 });
-  } catch (error: any) {
-    if (error?.code === "P2002") {
+    if (!existing.empty) {
       return NextResponse.json({ message: "Customer with this phone already exists" }, { status: 409 });
     }
+
+    const customerRef = adminDb.collection("customers").doc();
+    const newCustomer = {
+      id: customerRef.id,
+      organizationId: tenant.organizationId,
+      storeId: tenant.storeId,
+      name: body.name,
+      phone: body.phone,
+      balance: body.balance,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    };
+
+    await customerRef.set(newCustomer);
+    return NextResponse.json(mapCustomer({ ...newCustomer, payments: [] }), { status: 201 });
+  } catch (error: any) {
     const message = getErrorMessage(error, "Unable to create customer");
     return NextResponse.json({ message }, { status: getTenantErrorStatus(error, 400) });
   }

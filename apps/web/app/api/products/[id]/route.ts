@@ -1,11 +1,9 @@
-import { Decimal } from "@prisma/client/runtime/library";
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
-import { assertDatabaseConfig } from "../../../../lib/database-url";
 import { getApiErrorStatus, getErrorMessage } from "../../../../lib/errors";
-import { prisma } from "../../../../lib/prisma";
 import { mapProduct } from "../../../../lib/server-mappers";
 import { getTenantErrorStatus, requireActiveStore } from "../../../../lib/tenant";
+import { adminDb } from "../../../../lib/firebase/server";
 
 export const runtime = "nodejs";
 
@@ -34,38 +32,33 @@ export async function PUT(
   }
 ) {
   try {
-    assertDatabaseConfig();
     const tenant = await requireActiveStore();
     const params = paramsSchema.parse(await context.params);
     const body = updateSchema.parse(await request.json());
-    const existing = await prisma.product.findFirst({
-      where: {
-        id: params.id,
-        storeId: tenant.storeId
-      }
-    });
+    
+    const productRef = adminDb.collection("products").doc(params.id);
+    const existingDoc = await productRef.get();
 
-    if (!existing) {
+    if (!existingDoc.exists || existingDoc.data()?.storeId !== tenant.storeId) {
       return NextResponse.json({ message: "Product not found" }, { status: 404 });
     }
 
-    const product = await prisma.product.update({
-      where: { id: params.id },
-      data: {
-        name: body.name,
-        category: body.category === undefined ? undefined : body.category ?? null,
-        barcode: body.barcode === undefined ? undefined : body.barcode || null,
-        price: body.price === undefined ? undefined : new Decimal(body.price),
-        costPrice: body.costPrice === undefined ? undefined : new Decimal(body.costPrice),
-        discountPercent:
-          body.discountPercent === undefined ? undefined : new Decimal(body.discountPercent),
-        taxPercent: body.taxPercent === undefined ? undefined : new Decimal(body.taxPercent),
-        stock: body.stock,
-        minStock: body.minStock
-      }
-    });
+    const updates: Record<string, any> = { updatedAt: new Date() };
+    
+    if (body.name !== undefined) updates.name = body.name;
+    if (body.category !== undefined) updates.category = body.category ?? null;
+    if (body.barcode !== undefined) updates.barcode = body.barcode || null;
+    if (body.price !== undefined) updates.price = body.price;
+    if (body.costPrice !== undefined) updates.costPrice = body.costPrice;
+    if (body.discountPercent !== undefined) updates.discountPercent = body.discountPercent;
+    if (body.taxPercent !== undefined) updates.taxPercent = body.taxPercent;
+    if (body.stock !== undefined) updates.stock = body.stock;
+    if (body.minStock !== undefined) updates.minStock = body.minStock;
 
-    return NextResponse.json(mapProduct(product));
+    await productRef.update(updates);
+    const updatedDoc = await productRef.get();
+
+    return NextResponse.json(mapProduct({ id: updatedDoc.id, ...updatedDoc.data() }));
   } catch (error) {
     const message = getErrorMessage(error, "Unable to update product");
     return NextResponse.json({ message }, { status: getTenantErrorStatus(error, getApiErrorStatus(error, 400)) });
@@ -79,19 +72,17 @@ export async function DELETE(
   }
 ) {
   try {
-    assertDatabaseConfig();
     const tenant = await requireActiveStore();
     const params = paramsSchema.parse(await context.params);
-    const deleted = await prisma.product.deleteMany({
-      where: {
-        id: params.id,
-        storeId: tenant.storeId
-      }
-    });
+    
+    const productRef = adminDb.collection("products").doc(params.id);
+    const existingDoc = await productRef.get();
 
-    if (deleted.count === 0) {
+    if (!existingDoc.exists || existingDoc.data()?.storeId !== tenant.storeId) {
       return NextResponse.json({ message: "Product not found" }, { status: 404 });
     }
+
+    await productRef.delete();
 
     return new NextResponse(null, { status: 204 });
   } catch (error) {

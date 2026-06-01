@@ -1,12 +1,10 @@
-import { Decimal } from "@prisma/client/runtime/library";
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { calculateCheckout } from "../../../lib/billing";
-import { assertDatabaseConfig } from "../../../lib/database-url";
 import { getApiErrorStatus, getErrorMessage } from "../../../lib/errors";
-import { prisma } from "../../../lib/prisma";
 import { mapBill } from "../../../lib/server-mappers";
 import { getTenantErrorStatus, requireActiveStore } from "../../../lib/tenant";
+import { adminDb } from "../../../lib/firebase/server";
 
 export const runtime = "nodejs";
 
@@ -32,49 +30,33 @@ const checkoutSchema = z.object({
 
 export async function GET(request: NextRequest) {
   try {
-    assertDatabaseConfig();
     const tenant = await requireActiveStore();
     const url = new URL(request.url);
     const page = Math.max(1, Number(url.searchParams.get("page")) || 1);
     const limit = Math.min(100, Math.max(1, Number(url.searchParams.get("limit")) || 20));
-    const search = url.searchParams.get("search")?.trim() || "";
-    const dateFrom = url.searchParams.get("from") || "";
-    const dateTo = url.searchParams.get("to") || "";
-
-    const where: Record<string, unknown> = { storeId: tenant.storeId };
+    const search = url.searchParams.get("search")?.trim().toLowerCase() || "";
+    
+    // In NoSQL, doing complex ranges + sorting + filtering is limited.
+    // For this migration, we fetch recent bills and filter in memory.
+    let query = adminDb.collection("bills").where("storeId", "==", tenant.storeId).orderBy("createdAt", "desc").limit(200);
+    
+    const snapshot = await query.get();
+    let bills = snapshot.docs.map(doc => doc.data());
 
     if (search) {
-      where.OR = [
-        { id: { contains: search, mode: "insensitive" } },
-        { customerName: { contains: search, mode: "insensitive" } },
-        { customerPhone: { contains: search, mode: "insensitive" } },
-      ];
+      bills = bills.filter(b => 
+        b.id.toLowerCase().includes(search) || 
+        (b.customerName && b.customerName.toLowerCase().includes(search)) ||
+        (b.customerPhone && b.customerPhone.toLowerCase().includes(search))
+      );
     }
 
-    if (dateFrom || dateTo) {
-      const createdAt: Record<string, Date> = {};
-      if (dateFrom) createdAt.gte = new Date(dateFrom);
-      if (dateTo) {
-        const end = new Date(dateTo);
-        end.setHours(23, 59, 59, 999);
-        createdAt.lte = end;
-      }
-      where.createdAt = createdAt;
-    }
-
-    const [bills, total] = await Promise.all([
-      prisma.bill.findMany({
-        where: where as any,
-        include: { items: true, refunds: true },
-        orderBy: { createdAt: "desc" },
-        skip: (page - 1) * limit,
-        take: limit,
-      }),
-      prisma.bill.count({ where: where as any }),
-    ]);
+    const total = bills.length;
+    const skip = (page - 1) * limit;
+    const paginatedBills = bills.slice(skip, skip + limit);
 
     return NextResponse.json({
-      bills: bills.map(mapBill),
+      bills: paginatedBills.map(mapBill),
       total,
       page,
       limit,
@@ -85,157 +67,139 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ message }, { status: getTenantErrorStatus(error, 500) });
   }
 }
+
 export async function POST(request: NextRequest) {
   try {
-    assertDatabaseConfig();
     const tenant = await requireActiveStore();
     const body = checkoutSchema.parse(await request.json());
-    const productIds = body.items.map((item) => item.productId);
-    const products = await prisma.product.findMany({
-      where: {
-        storeId: tenant.storeId,
-        id: {
-          in: productIds
-        }
-      }
-    });
-
-    const productMap = new Map(products.map((product) => [product.id, product]));
-
-    for (const item of body.items) {
-      const product = productMap.get(item.productId);
-      if (!product) {
-        return NextResponse.json(
-          { message: `Product missing: ${item.productId}` },
-          { status: 400 }
-        );
-      }
-
-      if (product.stock < item.quantity) {
-        return NextResponse.json(
-          { message: `Not enough stock for ${product.name}` },
-          { status: 400 }
-        );
-      }
-    }
-
+    
     const summary = calculateCheckout(
       body.items,
       body.billDiscountPercent,
       body.billManualDiscountAmount
     );
 
-    const bill = await prisma.$transaction(async (tx) => {
-      const createdBill = await tx.bill.create({
-        data: {
-          organizationId: tenant.organizationId,
-          storeId: tenant.storeId,
-          cashierUserId: tenant.user.id,
-          totalAmount: new Decimal(summary.totalAmount),
-          discountAmount: new Decimal(summary.discountAmount),
-          taxAmount: new Decimal(summary.taxAmount),
-          finalAmount: new Decimal(summary.finalAmount),
-          billDiscountPercent: new Decimal(body.billDiscountPercent),
-          billManualDiscountAmount: new Decimal(body.billManualDiscountAmount),
-          paymentMethod: body.paymentMethod,
-          customerName: body.customerName,
-          customerPhone: body.customerPhone
+    const billRef = adminDb.collection("bills").doc();
+    const createdBillData: Record<string, any> = {};
+
+    await adminDb.runTransaction(async (tx) => {
+      // Reads
+      const productRefs = body.items.map(item => adminDb.collection("products").doc(item.productId));
+      const productDocs = await Promise.all(productRefs.map(ref => tx.get(ref)));
+      
+      const productMap = new Map();
+      for (const doc of productDocs) {
+        if (!doc.exists) {
+          throw new Error(`Product missing: ${doc.id}`);
         }
-      });
+        productMap.set(doc.id, doc.data());
+      }
 
-      // Seamless Khata Integration
-      if (body.paymentMethod === "credit" && body.customerPhone) {
-        // Find or create customer
-        let customer = await tx.customer.findUnique({
-          where: {
-            storeId_phone: {
-              storeId: tenant.storeId,
-              phone: body.customerPhone
-            }
-          }
-        });
-
-        if (!customer && body.customerName) {
-          customer = await tx.customer.create({
-            data: {
-              organizationId: tenant.organizationId,
-              storeId: tenant.storeId,
-              name: body.customerName,
-              phone: body.customerPhone,
-              balance: 0
-            }
-          });
-        }
-
-        if (customer) {
-          // Update balance
-          await tx.customer.update({
-            where: { id: customer.id },
-            data: {
-              balance: {
-                increment: new Decimal(summary.finalAmount)
-              }
-            }
-          });
-
-          // Create ledger entry
-          await tx.ledgerEntry.create({
-            data: {
-              organizationId: tenant.organizationId,
-              storeId: tenant.storeId,
-              customerId: customer.id,
-              amount: new Decimal(summary.finalAmount),
-              type: "credit",
-              note: `Bill #${createdBill.id.slice(-6)}`
-            }
-          });
+      for (const item of body.items) {
+        const product = productMap.get(item.productId);
+        if (product.stock < item.quantity) {
+          throw new Error(`Not enough stock for ${product.name}`);
         }
       }
 
-      for (const item of summary.items) {
-        const product = productMap.get(item.productId)!;
+      let customerRef = null;
+      let customerDoc = null;
 
-        await tx.billItem.create({
-          data: {
-            organizationId: tenant.organizationId,
-            storeId: tenant.storeId,
-            billId: createdBill.id,
+      if (body.paymentMethod === "credit" && body.customerPhone) {
+        const customerQuery = await adminDb.collection("customers")
+          .where("storeId", "==", tenant.storeId)
+          .where("phone", "==", body.customerPhone)
+          .limit(1)
+          .get();
+          
+        if (!customerQuery.empty) {
+          customerRef = customerQuery.docs[0].ref;
+          customerDoc = await tx.get(customerRef);
+        } else if (body.customerName) {
+          customerRef = adminDb.collection("customers").doc();
+        }
+      }
+
+      // Writes
+      Object.assign(createdBillData, {
+        id: billRef.id,
+        organizationId: tenant.organizationId,
+        storeId: tenant.storeId,
+        cashierUserId: tenant.user.uid,
+        totalAmount: summary.totalAmount,
+        discountAmount: summary.discountAmount,
+        taxAmount: summary.taxAmount,
+        finalAmount: summary.finalAmount,
+        billDiscountPercent: body.billDiscountPercent,
+        billManualDiscountAmount: body.billManualDiscountAmount,
+        paymentMethod: body.paymentMethod,
+        customerName: body.customerName,
+        customerPhone: body.customerPhone,
+        status: "completed",
+        items: summary.items.map(item => {
+          const p = productMap.get(item.productId);
+          return {
+            id: adminDb.collection("bills").doc().id, // Random ID for item
             productId: item.productId,
             quantity: item.quantity,
-            price: new Decimal(item.price),
-            costPrice: product.costPrice,
-            discount: new Decimal(item.discountAmount),
-            tax: new Decimal(item.taxAmount),
-            total: new Decimal(item.total),
-            productName: product.name
-          }
-        });
+            price: item.price,
+            costPrice: p.costPrice,
+            discount: item.discountAmount,
+            tax: item.taxAmount,
+            total: item.total,
+            productName: p.name
+          };
+        }),
+        createdAt: new Date()
+      });
 
-        await tx.product.update({
-          where: {
-            id: item.productId
-          },
-          data: {
-            stock: {
-              decrement: item.quantity
-            }
-          }
-        });
+      tx.set(billRef, createdBillData);
+
+      // Stock updates
+      for (const item of summary.items) {
+        const pRef = adminDb.collection("products").doc(item.productId);
+        const pData = productMap.get(item.productId);
+        tx.update(pRef, { stock: pData.stock - item.quantity });
       }
 
-      return tx.bill.findUniqueOrThrow({
-        where: {
-          id: createdBill.id
-        },
-        include: {
-          items: true
+      // Customer / Khata updates
+      if (customerRef) {
+        if (customerDoc && customerDoc.exists) {
+          tx.update(customerRef, {
+            balance: customerDoc.data()?.balance + summary.finalAmount,
+            updatedAt: new Date()
+          });
+        } else if (body.customerName) {
+          tx.set(customerRef, {
+            id: customerRef.id,
+            organizationId: tenant.organizationId,
+            storeId: tenant.storeId,
+            name: body.customerName,
+            phone: body.customerPhone,
+            balance: summary.finalAmount,
+            createdAt: new Date(),
+            updatedAt: new Date()
+          });
         }
-      });
+
+        const ledgerRef = adminDb.collection("ledgerEntries").doc();
+        tx.set(ledgerRef, {
+          id: ledgerRef.id,
+          organizationId: tenant.organizationId,
+          storeId: tenant.storeId,
+          customerId: customerRef.id,
+          amount: summary.finalAmount,
+          type: "credit",
+          note: `Bill #${createdBillData.id.slice(-6)}`,
+          date: new Date(),
+          createdAt: new Date()
+        });
+      }
     });
 
     return NextResponse.json(
       {
-        ...mapBill(bill),
+        ...mapBill(createdBillData),
         summary
       },
       { status: 201 }

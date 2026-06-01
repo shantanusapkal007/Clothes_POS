@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
-import { prisma } from "../../../lib/prisma";
 import { requireActiveStore, getTenantErrorStatus } from "../../../lib/tenant";
+import { adminDb } from "../../../lib/firebase/server";
 
 export const runtime = "nodejs";
 
@@ -11,115 +11,79 @@ export async function GET(request: NextRequest) {
     const dateFrom = url.searchParams.get("from");
     const dateTo = url.searchParams.get("to");
 
-    // Construct common where clause for tenant isolation
-    const where: any = {
-      storeId: tenant.storeId,
-    };
+    // Fetch all completed bills for the store, applying date filter in-memory
+    let billsQuery = adminDb.collection("bills")
+      .where("storeId", "==", tenant.storeId)
+      .where("status", "==", "completed");
+
+    const billsSnap = await billsQuery.get();
+    let bills = billsSnap.docs.map(d => d.data());
 
     if (dateFrom || dateTo) {
-      where.createdAt = {};
-      if (dateFrom) where.createdAt.gte = new Date(dateFrom);
-      if (dateTo) {
-        const end = new Date(dateTo);
-        end.setHours(23, 59, 59, 999);
-        where.createdAt.lte = end;
+      const fromDate = dateFrom ? new Date(dateFrom) : null;
+      const toDate = dateTo ? (() => { const d = new Date(dateTo); d.setHours(23,59,59,999); return d; })() : null;
+      bills = bills.filter(b => {
+        const createdAt = b.createdAt?.toDate ? b.createdAt.toDate() : new Date(b.createdAt);
+        if (fromDate && createdAt < fromDate) return false;
+        if (toDate && createdAt > toDate) return false;
+        return true;
+      });
+    }
+
+    // Aggregate per product from bill items
+    const productStatsMap = new Map<string, { name: string; revenue: number; totalCost: number; totalSold: number }>();
+
+    for (const bill of bills) {
+      if (!bill.items || !Array.isArray(bill.items)) continue;
+      for (const item of bill.items) {
+        const existing = productStatsMap.get(item.productId) || { name: item.productName, revenue: 0, totalCost: 0, totalSold: 0 };
+        existing.revenue += Number(item.total);
+        existing.totalCost += Number(item.quantity) * Number(item.costPrice || 0);
+        existing.totalSold += Number(item.quantity);
+        productStatsMap.set(item.productId, existing);
       }
     }
 
-    // 1. Get Aggregated Sales Stats from BillItems
-    // This uses SQL-level aggregation for high performance
-    const salesStats = await prisma.billItem.groupBy({
-      by: ["productId", "productName"],
-      where: {
-        ...where,
-        bill: { status: "completed" }, // Only count completed sales
-      },
-      _sum: {
-        quantity: true,
-        total: true,
-        // We use the snapshotted costPrice from BillItem for historical accuracy
-      },
-    });
+    // Fetch current product stock
+    const productsSnap = await adminDb.collection("products").where("storeId", "==", tenant.storeId).get();
+    const productInfoMap = new Map(productsSnap.docs.map(d => [d.id, d.data()]));
 
-    // 2. Fetch current product info (stock, minStock) for the UI
-    const products = await prisma.product.findMany({
-      where: { storeId: tenant.storeId },
-      select: {
-        id: true,
-        stock: true,
-        minStock: true,
-      },
-    });
-
-    const productInfoMap = new Map(products.map(p => [p.id, p]));
-
-    // 3. Calculate Profit per Product
-    // Profit = Total Revenue - (Quantity * costPrice)
-    // Note: Since BillItem.costPrice is snapshotted, we need to sum (item.quantity * item.costPrice)
-    // Prisma's groupBy doesn't support complex arithmetic in _sum yet, so we'll do this part in JS 
-    // but only on the AGGREGATED rows (which is much smaller than all bills).
-    
-    // For high-precision profit, we fetch the individual aggregated totals
-    // but since we want "Per Product" stats, we can optimize:
-    const detailedProfit = await prisma.billItem.findMany({
-      where: {
-        ...where,
-        bill: { status: "completed" },
-      },
-      select: {
-        productId: true,
-        quantity: true,
-        costPrice: true,
-      }
-    });
-
-    const productProfitMap = new Map<string, number>();
-    detailedProfit.forEach(item => {
-      const cost = Number(item.quantity) * Number(item.costPrice);
-      productProfitMap.set(item.productId, (productProfitMap.get(item.productId) || 0) + cost);
-    });
-
-    const data = salesStats.map(stat => {
-      const info = productInfoMap.get(stat.productId);
-      const revenue = Number(stat._sum.total || 0);
-      const totalCost = productProfitMap.get(stat.productId) || 0;
-      const profit = revenue - totalCost;
-
+    const data = Array.from(productStatsMap.entries()).map(([productId, stats]) => {
+      const info = productInfoMap.get(productId);
       return {
-        productId: stat.productId,
-        name: stat.productName,
+        productId,
+        name: stats.name,
         stock: info?.stock ?? 0,
         minStock: info?.minStock ?? 0,
-        totalSold: stat._sum.quantity || 0,
-        revenue,
-        profit,
+        totalSold: stats.totalSold,
+        revenue: stats.revenue,
+        profit: stats.revenue - stats.totalCost,
       };
     });
 
-    // 4. Get Expenses for the same period
-    const expenseWhere: any = { storeId: tenant.storeId };
-    if (dateFrom || dateTo) {
-      expenseWhere.date = {};
-      if (dateFrom) expenseWhere.date.gte = new Date(dateFrom);
-      if (dateTo) {
-        const end = new Date(dateTo);
-        end.setHours(23, 59, 59, 999);
-        expenseWhere.date.lte = end;
-      }
-    }
-    const totalExpenses = await prisma.expense.aggregate({
-      where: expenseWhere,
-      _sum: { amount: true }
-    });
+    // Expenses aggregation
+    let expensesQuery = adminDb.collection("expenses").where("storeId", "==", tenant.storeId);
+    const expensesSnap = await expensesQuery.get();
+    let expenses = expensesSnap.docs.map(d => d.data());
 
-    // Sort by revenue descending by default
+    if (dateFrom || dateTo) {
+      const fromDate = dateFrom ? new Date(dateFrom) : null;
+      const toDate = dateTo ? (() => { const d = new Date(dateTo); d.setHours(23,59,59,999); return d; })() : null;
+      expenses = expenses.filter(e => {
+        const date = e.date?.toDate ? e.date.toDate() : new Date(e.date);
+        if (fromDate && date < fromDate) return false;
+        if (toDate && date > toDate) return false;
+        return true;
+      });
+    }
+
+    const totalExpenses = expenses.reduce((sum, e) => sum + Number(e.amount), 0);
+
     data.sort((a, b) => b.revenue - a.revenue);
 
     return NextResponse.json({
       items: data,
-      summary: {
-        totalExpenses: Number(totalExpenses._sum.amount || 0)
-      }
+      summary: { totalExpenses }
     });
   } catch (error) {
     console.error("Stats API Error:", error);
