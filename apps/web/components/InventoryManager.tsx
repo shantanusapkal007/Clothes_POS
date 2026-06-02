@@ -100,17 +100,24 @@ export function InventoryManager() {
   };
 
   const handleUpdateField = async (id: string, field: keyof Product, value: number | string) => {
+    // 1. Instantly update the SWR local cache (Optimistic Update for 0ms lag)
+    const updatedItems = products.map((p) => (p.id === id ? { ...p, [field]: value } : p));
+    
+    void mutate(
+      {
+        items: updatedItems,
+        totalCount: data?.totalCount || 0,
+      },
+      { revalidate: false } // Prevent SWR from refetching the entire list immediately
+    );
+
+    // 2. Perform database write in the background (non-blocking)
     try {
       await updateProduct(id, { [field]: value });
-      void mutate(
-        {
-          items: products.map((p) => (p.id === id ? { ...p, [field]: value } : p)),
-          totalCount: data?.totalCount || 0,
-        },
-        { revalidate: true }
-      );
       showMessage("Updated successfully");
     } catch {
+      // 3. Rollback SWR local state if server write fails
+      void mutate(); // Refetches absolute database state
       showMessage("Failed to update", "error");
     }
   };
