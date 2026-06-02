@@ -5,7 +5,7 @@ import useSWR from "swr";
 import Barcode from "react-barcode";
 import { getProducts } from "../../lib/api";
 import { type Product } from "../../types";
-import { getBillLayoutConfig } from "../../lib/printer";
+import { getBillLayoutConfig, getPrinterConfig, printBarcodeLabel } from "../../lib/printer";
 
 export default function BarcodeGeneratorPage() {
   const [storeName, setStoreName] = useState("Clothing Store");
@@ -68,7 +68,7 @@ export default function BarcodeGeneratorPage() {
     showMsg("Generated random CODE128 SKU");
   };
 
-  const handlePrint = () => {
+  const handlePrint = async () => {
     if (!name.trim()) {
       showMsg("Product Title is required to print", "error");
       return;
@@ -80,6 +80,32 @@ export default function BarcodeGeneratorPage() {
     if (quantity < 1) {
       showMsg("Print Quantity must be at least 1", "error");
       return;
+    }
+
+    const config = getPrinterConfig();
+    if (config.connected && config.connectionType !== "none") {
+      try {
+        const layout = getBillLayoutConfig();
+        const route = await printBarcodeLabel(
+          {
+            storeName,
+            productName: name,
+            category,
+            barcode: barcodeVal,
+            price,
+          },
+          quantity,
+          config,
+          layout
+        );
+
+        if (route === "device") {
+          showMsg(`Sent ${quantity} labels to ${config.connectionType.toUpperCase()} printer`);
+          return;
+        }
+      } catch (err) {
+        console.error("Direct thermal label print failed:", err);
+      }
     }
 
     const barcodeHtml = printRef.current?.innerHTML;

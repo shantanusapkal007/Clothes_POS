@@ -633,10 +633,6 @@ async function hydrateSerialPort(config?: PrinterConfig): Promise<any> {
     return serialPort;
   }
 
-  if (!config) {
-    return null;
-  }
-
   if (!isSerialAvailable()) {
     return null;
   }
@@ -651,23 +647,29 @@ async function hydrateSerialPort(config?: PrinterConfig): Promise<any> {
 
   try {
     const ports = await serialNavigator.getPorts();
-
-    if (!config.vendorId || !config.productId) {
+    if (ports.length === 0) {
       return null;
     }
 
-    const vendorId = Number(config.vendorId);
-    const productId = Number(config.productId);
+    let matched = null;
 
-    if (!Number.isFinite(vendorId) || !Number.isFinite(productId)) {
-      return null;
+    if (config?.vendorId && config?.productId) {
+      const vendorId = Number(config.vendorId);
+      const productId = Number(config.productId);
+
+      if (Number.isFinite(vendorId) && Number.isFinite(productId)) {
+        matched =
+          ports.find((port: any) => {
+            const info = typeof port.getInfo === "function" ? port.getInfo() : {};
+            return info.usbVendorId === vendorId && info.usbProductId === productId;
+          }) ?? null;
+      }
     }
 
-    const matched =
-      ports.find((port: any) => {
-        const info = typeof port.getInfo === "function" ? port.getInfo() : {};
-        return info.usbVendorId === vendorId && info.usbProductId === productId;
-      }) ?? null;
+    // Fallback to first authorized port if no specific match was found
+    if (!matched && ports.length > 0) {
+      matched = ports[0];
+    }
 
     serialPort = matched;
     return matched;
@@ -1416,4 +1418,130 @@ export async function printReceipt(
   // On iOS, try browser print (iframe-based AirPrint trigger).
   // This is the most reliable path for iOS Safari.
   return openBrowserPrintWindow(content, layout) ? "browser" : "failed";
+}
+
+export async function sendRawPrintData(
+  data: Uint8Array,
+  config: PrinterConfig,
+): Promise<boolean> {
+  if (config.connectionType === "bluetooth") {
+    return sendBluetoothData(data, config);
+  }
+
+  if (config.connectionType === "serial") {
+    return sendSerialData(data, config);
+  }
+
+  if (config.connectionType === "usb") {
+    const device = await findUsbDevice(config);
+    if (!device) {
+      return false;
+    }
+
+    return writeUsbData(device, data);
+  }
+
+  if (config.connectionType === "rawbt") {
+    return sendViaRawBt(data);
+  }
+
+  return false;
+}
+
+export async function printBarcodeLabel(
+  label: {
+    storeName: string;
+    productName: string;
+    category: string;
+    barcode: string;
+    price: number;
+  },
+  quantity: number = 1,
+  printerConfig: PrinterConfig = getPrinterConfig(),
+  layout: BillLayoutConfig = getBillLayoutConfig(),
+): Promise<PrintTransportResult> {
+  const encoder = new TextEncoder();
+  const chunks: Uint8Array[] = [];
+
+  const writeStr = (str: string) => {
+    chunks.push(encoder.encode(str));
+  };
+
+  const writeBytes = (bytes: number[]) => {
+    chunks.push(new Uint8Array(bytes));
+  };
+
+  for (let i = 0; i < quantity; i++) {
+    // 1. Initialize printer
+    writeStr(ESC_POS.INIT);
+
+    // 2. Select alignment center
+    writeStr(ESC_POS.ALIGN_CENTER);
+
+    // 3. Store name (bold)
+    writeStr(ESC_POS.BOLD_ON);
+    writeStr(`${label.storeName.toUpperCase()}\n`);
+    writeStr(ESC_POS.BOLD_OFF);
+
+    // 4. Barcode settings
+    writeBytes([0x1d, 0x68, 60]); // Barcode height: 60 dots (7.5mm)
+    writeBytes([0x1d, 0x77, 2]);  // Barcode width multiplier: 2 (standard)
+    writeBytes([0x1d, 0x48, 2]);  // Print HRI characters (text) below barcode
+
+    // 5. Print barcode (CODE128)
+    const barcodeStr = label.barcode.trim();
+    if (barcodeStr) {
+      // CODE128: GS k 73 n {B <data>
+      // '{B' consists of two bytes: 0x7B, 0x42
+      const dataLen = 2 + barcodeStr.length;
+      writeBytes([0x1d, 0x6b, 73, dataLen, 0x7b, 0x42]);
+      writeStr(barcodeStr);
+      writeStr("\n");
+    }
+
+    // 6. Product Name, Category and Price
+    writeStr(ESC_POS.ALIGN_LEFT);
+    writeStr(ESC_POS.BOLD_ON);
+    const shortName = label.productName.length > 32 
+      ? `${label.productName.slice(0, 29)}...`
+      : label.productName;
+    writeStr(`${shortName}\n`);
+    writeStr(ESC_POS.BOLD_OFF);
+    
+    // Format category & price
+    const priceStr = `INR ${label.price.toFixed(2)}`;
+    const lineLen = layout.itemsPerLine || 42;
+    // Align category to left, price to right
+    const catStr = label.category || "General";
+    const spaceCount = lineLen - catStr.length - priceStr.length;
+    const padding = spaceCount > 0 ? " ".repeat(spaceCount) : " ";
+    writeStr(`${catStr}${padding}${priceStr}\n`);
+
+    // 7. Feed and cut
+    writeStr(ESC_POS.FEED_LINES(3));
+    writeStr(ESC_POS.CUT_PAPER);
+  }
+
+  // Concatenate all chunks into a single Uint8Array
+  const totalLength = chunks.reduce((acc, chunk) => acc + chunk.length, 0);
+  const data = new Uint8Array(totalLength);
+  let offset = 0;
+  for (const chunk of chunks) {
+    data.set(chunk, offset);
+    offset += chunk.length;
+  }
+
+  const printedToDevice = await sendRawPrintData(data, printerConfig);
+  if (printedToDevice) {
+    return "device";
+  }
+
+  // If printing to device failed and it is RawBT (Android), try RawBT bridge
+  if (isRawBtAvailable() && printerConfig.connectionType !== "rawbt") {
+    if (sendViaRawBt(data)) {
+      return "device";
+    }
+  }
+
+  return "failed";
 }
