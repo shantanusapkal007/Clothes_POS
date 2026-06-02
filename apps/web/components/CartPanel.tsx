@@ -261,25 +261,25 @@ export function CartPanel({
             className="space-y-2 sm:space-y-3 md:space-y-4 border-t border-outline-variant/30 pt-3 sm:pt-4 md:pt-6"
           >
             {/* Payment Method */}
-            <div className="rounded-lg border border-outline-variant/25 bg-white/90 p-2 sm:p-3 md:p-4 shadow-sm">
-              <span className="mb-1.5 sm:mb-2 block text-[8px] sm:text-[9px] md:text-[10px] font-bold uppercase tracking-[0.15em] text-on-secondary-container">
+            <div className="rounded-2xl border border-slate-200/50 bg-white/90 p-3 sm:p-4 shadow-sm">
+              <span className="mb-2 block text-[9px] sm:text-[10px] font-black uppercase tracking-[0.18em] text-slate-500">
                 Payment Method
               </span>
-              <div className="grid grid-cols-4 gap-1 sm:gap-1.5 md:gap-2">
+              <div className="grid grid-cols-4 gap-1.5 sm:gap-2">
                 {PAYMENT_METHODS.map((method) => (
                   <motion.button
                     key={method.id}
                     type="button"
-                    whileTap={{ scale: 0.97 }}
+                    whileTap={{ scale: 0.96 }}
                     onClick={() => setPaymentMethod(method.id)}
-                    className={`flex flex-col items-center gap-0.5 sm:gap-1 rounded-lg border py-2 sm:py-2.5 md:py-3 transition-all ${
+                    className={`flex flex-col items-center gap-1 rounded-xl border py-2.5 sm:py-3 transition-all duration-200 ${
                       paymentMethod === method.id
-                        ? "border-primary bg-primary text-on-primary shadow-md"
-                        : "border-outline-variant/25 bg-surface-container-lowest text-on-surface"
+                        ? "border-primary bg-gradient-to-br from-primary to-indigo-600 text-white shadow-md shadow-primary/10 scale-102"
+                        : "border-slate-200/60 bg-white/50 text-slate-700 hover:bg-slate-50 hover:border-slate-300"
                     }`}
                   >
                     <span className="material-symbols-outlined text-lg sm:text-[20px]">{method.icon}</span>
-                    <span className="text-[8px] sm:text-[10px] md:text-xs font-bold uppercase tracking-[0.12em]">
+                    <span className="text-[8px] sm:text-[9px] font-black uppercase tracking-[0.12em]">
                       {method.label}
                     </span>
                   </motion.button>
@@ -287,7 +287,7 @@ export function CartPanel({
               </div>
             </div>
 
-            <div className="relative block rounded-xl border border-slate-200 bg-slate-50 p-3 shadow-sm">
+            <div className="relative block rounded-2xl border border-slate-200/50 bg-slate-50/50 p-4 shadow-sm backdrop-blur-sm">
               <span className="mb-2 block text-[8px] sm:text-[9px] md:text-[10px] font-bold uppercase tracking-[0.15em] text-slate-500">
                 Customer Information
               </span>
@@ -511,7 +511,7 @@ export function CartPanel({
             {/* Checkout Button */}
             <motion.button
               type="button"
-              whileTap={checkoutPending || !canSendWhatsApp ? undefined : { scale: 0.99 }}
+              whileTap={checkoutPending || !canSendWhatsApp ? undefined : { scale: 0.98 }}
               onClick={() =>
                 onCheckout({
                   paymentMethod,
@@ -521,7 +521,7 @@ export function CartPanel({
                 })
               }
               disabled={checkoutPending || !canSendWhatsApp}
-              className="flex w-full items-center justify-center gap-2 rounded-lg bg-primary py-3 sm:py-3.5 md:py-4 text-sm sm:text-base md:text-lg font-bold text-on-primary shadow-[0_12px_30px_rgba(15,118,110,0.2)] transition-all active:scale-[0.98] disabled:opacity-50"
+              className="flex w-full items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-primary via-indigo-600 to-violet-600 py-3.5 sm:py-4 text-sm sm:text-base font-black text-white shadow-[0_10px_25px_rgba(99,102,241,0.25)] hover:shadow-[0_15px_30px_rgba(99,102,241,0.35)] hover:scale-[1.01] active:scale-[0.97] transition-all disabled:opacity-50 disabled:scale-100 border border-indigo-500/25"
             >
               {checkoutPending ? "Processing..." : "Checkout"}
               <span className="material-symbols-outlined text-lg sm:text-xl">chevron_right</span>

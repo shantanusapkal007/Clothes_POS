@@ -194,32 +194,32 @@
 
   /* ─── Panels ─── */
   .panel {
-    @apply rounded-xl border border-slate-200/60 bg-white p-3 shadow-[0_8px_30px_rgba(15,23,42,0.03)] md:p-6;
+    @apply rounded-2xl border border-slate-200/40 bg-white/90 p-4 shadow-[0_12px_40px_rgba(15,23,42,0.03)] ring-1 ring-white/10 backdrop-blur-sm transition-all duration-300 hover:shadow-[0_16px_50px_rgba(15,23,42,0.045)];
   }
 
   .panel-heading {
-    @apply mb-3 flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between md:mb-4 md:gap-3;
+    @apply mb-3 flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between md:mb-5 md:gap-3;
   }
 
   .panel-heading h2 {
-    @apply font-headline text-lg font-bold text-on-background md:text-2xl;
+    @apply font-headline text-lg font-extrabold tracking-tight text-on-background md:text-2xl;
   }
 
   .eyebrow {
-    @apply mb-1 text-[9px] font-bold uppercase tracking-[0.2em] text-slate-400 md:text-[10px] md:tracking-[0.25em];
+    @apply mb-1 text-[9px] font-black uppercase tracking-[0.22em] text-slate-400/80 md:text-[10px] md:tracking-[0.25em];
   }
 
   /* ─── Inputs ─── */
   .text-input {
-    @apply w-full rounded-xl border border-slate-200 bg-white px-3 py-3 text-sm font-semibold text-on-surface shadow-sm transition-all placeholder:text-slate-400/80 focus:border-primary focus:bg-white focus:outline-none focus:ring-4 focus:ring-primary/10 md:px-5 md:py-4 md:text-base;
+    @apply w-full rounded-2xl border border-slate-200/80 bg-white px-3 py-3 text-sm font-semibold text-on-surface shadow-sm transition-all placeholder:text-slate-400/60 focus:border-primary focus:bg-white focus:outline-none focus:ring-4 focus:ring-primary/10 md:px-5 md:py-3.5 md:text-base;
   }
 
   .field-input {
-    @apply w-full rounded-xl border border-slate-200 bg-white px-3 py-3 text-sm font-semibold text-on-surface shadow-sm transition-all placeholder:text-slate-400/80 focus:border-primary focus:bg-white focus:outline-none focus:ring-4 focus:ring-primary/10 md:px-5 md:py-4 md:text-base;
+    @apply w-full rounded-2xl border border-slate-200/80 bg-white px-3 py-3 text-sm font-semibold text-on-surface shadow-sm transition-all placeholder:text-slate-400/60 focus:border-primary focus:bg-white focus:outline-none focus:ring-4 focus:ring-primary/10 md:px-5 md:py-3.5 md:text-base;
   }
 
   .field-input-compact {
-    @apply w-full rounded-lg border border-slate-200 bg-white px-2 py-2 text-sm font-bold text-on-surface shadow-sm transition-all focus:border-primary focus:bg-white focus:outline-none focus:ring-2 focus:ring-primary/10;
+    @apply w-full rounded-xl border border-slate-200/80 bg-white px-2.5 py-2.5 text-sm font-bold text-on-surface shadow-sm transition-all focus:border-primary focus:bg-white focus:outline-none focus:ring-2 focus:ring-primary/10;
   }
 
   .panel-options {
@@ -228,35 +228,35 @@
 
   /* ─── Buttons ─── */
   .button {
-    @apply inline-flex items-center justify-center rounded-xl px-4 py-3 text-sm font-semibold tracking-wide transition-all active:scale-[0.96] disabled:cursor-not-allowed disabled:opacity-60;
+    @apply inline-flex items-center justify-center rounded-2xl px-5 py-3.5 text-sm font-bold tracking-wide transition-all hover:scale-[1.015] hover:shadow-md active:scale-[0.97] disabled:cursor-not-allowed disabled:opacity-60 disabled:scale-100;
     min-height: 48px;
     min-width: 48px;
     touch-action: manipulation;
   }
 
   .button-small {
-    @apply min-h-11 px-3 py-2 text-xs uppercase tracking-[0.15em] md:px-4 md:py-2.5 md:text-sm md:tracking-[0.15em];
+    @apply min-h-11 px-3.5 py-2.5 text-xs font-extrabold uppercase tracking-[0.15em] md:px-4 md:py-2.5 md:text-sm md:tracking-[0.15em];
     min-height: 44px;
   }
 
   .button-primary {
-    @apply bg-gradient-to-r from-primary to-violet-600 text-on-primary shadow-[0_8px_20px_rgba(99,102,241,0.22)] hover:from-primary-container hover:to-violet-700 hover:shadow-[0_12px_25px_rgba(99,102,241,0.35)];
+    @apply bg-gradient-to-r from-primary via-indigo-600 to-violet-600 text-on-primary shadow-[0_10px_25px_rgba(99,102,241,0.22)] hover:shadow-[0_15px_30px_rgba(99,102,241,0.35)] border border-indigo-500/25;
   }
 
   .button-secondary {
-    @apply border border-slate-200 bg-white text-on-surface shadow-sm hover:border-slate-300 hover:bg-slate-50;
+    @apply border border-slate-200/60 bg-white/80 text-on-surface shadow-sm hover:border-slate-300 hover:bg-slate-50 backdrop-blur-sm;
   }
 
   .button-ghost {
-    @apply bg-transparent text-slate-500 hover:bg-slate-100 hover:text-primary;
+    @apply bg-transparent text-slate-500 hover:bg-slate-100/70 hover:text-primary rounded-xl;
   }
 
   .badge {
-    @apply inline-flex items-center rounded-lg px-3 py-1 text-[10px] font-bold uppercase tracking-[0.2em];
+    @apply inline-flex items-center rounded-xl px-3 py-1.5 text-[9px] font-black uppercase tracking-[0.15em];
   }
 
   .badge-muted {
-    @apply bg-slate-100 text-slate-500;
+    @apply bg-slate-100 text-slate-500 border border-slate-200/40;
   }
 
   .success-text {
@@ -382,7 +382,27 @@
 
 @layer utilities {
   .glass-panel {
-    @apply bg-white/70 backdrop-blur-xl border border-white/50 shadow-[0_8px_32px_rgba(31,38,135,0.07)];
+    @apply bg-white/75 backdrop-blur-xl border border-slate-200/30 shadow-[0_15px_45px_rgba(15,23,42,0.045)] ring-1 ring-white/25 transition-all duration-300;
+  }
+
+  /* Curated category badge styles */
+  .badge-tops {
+    @apply bg-violet-50 text-violet-700 border border-violet-100/60;
+  }
+  .badge-dresses {
+    @apply bg-rose-50 text-rose-700 border border-rose-100/60;
+  }
+  .badge-bottoms {
+    @apply bg-emerald-50 text-emerald-700 border border-emerald-100/60;
+  }
+  .badge-accessories {
+    @apply bg-amber-50 text-amber-700 border border-amber-100/60;
+  }
+  .badge-outerwear {
+    @apply bg-indigo-50 text-indigo-700 border border-indigo-100/60;
+  }
+  .badge-general {
+    @apply bg-slate-50 text-slate-700 border border-slate-100/60;
   }
 
   .hide-scrollbar {

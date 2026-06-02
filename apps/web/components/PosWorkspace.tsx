@@ -63,6 +63,35 @@ function describePrinterRoute() {
   return `${printerConfig.connectionType.toUpperCase()} printer: ${printerConfig.name}`;
 }
 
+function getCategoryButtonClass(cat: string | null, isSelected: boolean) {
+  if (!isSelected) {
+    return "bg-white text-slate-700 border border-outline-variant/40 hover:bg-slate-50 active:scale-95";
+  }
+
+  if (cat === null) {
+    return "bg-gradient-to-r from-primary to-violet-600 text-white shadow-md shadow-primary/20 scale-[1.02]";
+  }
+
+  const name = cat.toLowerCase();
+  if (name.includes("top")) {
+    return "bg-gradient-to-r from-violet-600 to-indigo-600 text-white shadow-md shadow-violet-500/20 scale-[1.02]";
+  }
+  if (name.includes("dress")) {
+    return "bg-gradient-to-r from-rose-500 to-pink-600 text-white shadow-md shadow-rose-500/20 scale-[1.02]";
+  }
+  if (name.includes("bottom")) {
+    return "bg-gradient-to-r from-emerald-600 to-teal-600 text-white shadow-md shadow-emerald-500/20 scale-[1.02]";
+  }
+  if (name.includes("accessories") || name.includes("accessory")) {
+    return "bg-gradient-to-r from-amber-500 to-orange-600 text-white shadow-md shadow-amber-500/20 scale-[1.02]";
+  }
+  if (name.includes("outerwear") || name.includes("jacket")) {
+    return "bg-gradient-to-r from-indigo-600 to-blue-600 text-white shadow-md shadow-indigo-500/20 scale-[1.02]";
+  }
+
+  return "bg-gradient-to-r from-primary to-violet-600 text-white shadow-md shadow-primary/20 scale-[1.02]";
+}
+
 type MobileView = "products" | "cart";
 
 export function PosWorkspace() {
@@ -496,11 +525,7 @@ export function PosWorkspace() {
                 <button
                   type="button"
                   onClick={() => setSelectedCategory(null)}
-                  className={`px-3 py-1.5 rounded-full text-xs font-bold whitespace-nowrap transition-all duration-200 ${
-                    selectedCategory === null
-                      ? "bg-primary text-white shadow-md shadow-primary/20 scale-102"
-                      : "bg-white text-on-surface border border-outline-variant/40 hover:bg-surface-container-low"
-                  }`}
+                  className={`px-3.5 py-2 rounded-full text-xs font-extrabold whitespace-nowrap transition-all duration-200 ${getCategoryButtonClass(null, selectedCategory === null)}`}
                 >
                   All Categories
                 </button>
@@ -509,11 +534,7 @@ export function PosWorkspace() {
                     key={cat}
                     type="button"
                     onClick={() => setSelectedCategory(cat)}
-                    className={`px-3 py-1.5 rounded-full text-xs font-bold whitespace-nowrap transition-all duration-200 ${
-                      selectedCategory === cat
-                        ? "bg-primary text-white shadow-md shadow-primary/20 scale-102"
-                        : "bg-white text-on-surface border border-outline-variant/40 hover:bg-surface-container-low"
-                    }`}
+                    className={`px-3.5 py-2 rounded-full text-xs font-extrabold whitespace-nowrap transition-all duration-200 ${getCategoryButtonClass(cat, selectedCategory === cat)}`}
                   >
                     {cat}
                   </button>

@@ -40,6 +40,17 @@ function getColor(name: string) {
   return colors[Math.abs(hash) % colors.length];
 }
 
+function getCategoryBadgeClass(category?: string) {
+  if (!category) return "badge-general";
+  const cat = category.toLowerCase();
+  if (cat.includes("top")) return "badge-tops";
+  if (cat.includes("dress")) return "badge-dresses";
+  if (cat.includes("bottom")) return "badge-bottoms";
+  if (cat.includes("accessories") || cat.includes("accessory")) return "badge-accessories";
+  if (cat.includes("outerwear") || cat.includes("jacket") || cat.includes("coat")) return "badge-outerwear";
+  return "badge-general";
+}
+
 function ProductGridComponent({
   products,
   onAdd
@@ -75,37 +86,37 @@ function ProductGridComponent({
             type="button"
             onClick={() => onAdd(product)}
             disabled={isOutOfStock}
-            className={`group relative flex flex-col items-center rounded-xl sm:rounded-2xl border bg-white p-2.5 sm:p-3 md:p-4 text-center shadow-sm transition-all duration-200 active:scale-[0.95] active:shadow-md md:hover:shadow-lg md:hover:-translate-y-1 touch-action-manipulation select-none ${
+            className={`group relative flex flex-col items-center rounded-2xl border bg-white p-2.5 sm:p-3 md:p-4 text-center shadow-sm transition-all duration-200 active:scale-[0.96] active:shadow-md md:hover:shadow-lg md:hover:-translate-y-1 md:hover:shadow-primary/5 touch-action-manipulation select-none ${
               isOutOfStock
-                ? "border-outline-variant/10 opacity-40 cursor-not-allowed bg-slate-50"
+                ? "border-slate-100 opacity-40 cursor-not-allowed bg-slate-50"
                 : isLowStock
-                ? "border-amber-300 ring-2 ring-amber-100/50 hover:border-amber-400"
-                : "border-outline-variant/30 hover:border-primary/50"
+                ? "border-amber-300 ring-4 ring-amber-100/40 hover:border-amber-400"
+                : "border-slate-200/50 hover:border-primary/50"
             }`}
             style={{ minHeight: '120px' }}
           >
             {/* Low / Out of Stock Banner */}
             {isOutOfStock && (
-              <span className="absolute left-1/2 top-2 -translate-x-1/2 rounded bg-red-600 px-1.5 py-0.5 text-[8px] font-black uppercase tracking-wider text-white shadow">
+              <span className="absolute left-1/2 top-2 -translate-x-1/2 rounded-full bg-red-600 px-2 py-0.5 text-[8px] font-black uppercase tracking-wider text-white shadow-sm z-10">
                 Sold Out
               </span>
             )}
 
             {/* Avatar circle */}
-            <div className={`flex h-11 w-11 sm:h-12 sm:w-12 md:h-16 md:w-16 items-center justify-center rounded-full ${color.bg} mb-1.5 sm:mb-2 shadow-inner group-hover:scale-105 transition-transform duration-200`}>
-              <span className={`text-xs sm:text-sm md:text-lg font-extrabold tracking-wide ${color.text}`}>
+            <div className={`flex h-11 w-11 sm:h-12 sm:w-12 md:h-16 md:w-16 items-center justify-center rounded-full ${color.bg} mb-1.5 sm:mb-2 shadow-sm ring-2 ring-white/80 group-hover:scale-105 transition-transform duration-200`}>
+              <span className={`text-xs sm:text-sm md:text-lg font-black tracking-wide ${color.text}`}>
                 {getInitials(product.name)}
               </span>
             </div>
 
             {/* Product name */}
-            <p className="line-clamp-2 w-full text-[11px] sm:text-xs font-extrabold leading-snug text-on-surface group-hover:text-primary transition-colors">
+            <p className="line-clamp-2 w-full text-[11px] sm:text-xs font-bold leading-snug text-slate-800 group-hover:text-primary transition-colors">
               {product.name}
             </p>
 
-            {/* Category */}
+            {/* Category with dynamic luxury colors */}
             {product.category && (
-              <span className="mt-1 rounded-full bg-secondary/5 px-2 py-0.5 text-[8px] font-black uppercase tracking-widest text-secondary/80 sm:text-[9px]">
+              <span className={`mt-1.5 rounded-full px-2.5 py-0.5 text-[8px] font-black uppercase tracking-wider ${getCategoryBadgeClass(product.category)}`}>
                 {product.category}
               </span>
             )}
@@ -118,16 +129,16 @@ function ProductGridComponent({
             {/* Stock status badge */}
             <div className="mt-1 w-full flex items-center justify-center">
               {isOutOfStock ? (
-                <span className="rounded bg-red-50 px-1 py-0.5 text-[8px] font-extrabold uppercase text-red-600">
-                  Out of Stock (0)
+                <span className="rounded-lg bg-red-50 text-red-600 px-2 py-0.5 text-[8px] font-black uppercase tracking-wider border border-red-100">
+                  Out (0)
                 </span>
               ) : isLowStock ? (
-                <span className="rounded bg-amber-50 px-1 py-0.5 text-[8px] font-extrabold uppercase text-amber-700 animate-pulse">
-                  Low Stock ({product.stock})
+                <span className="rounded-lg bg-amber-50 text-amber-700 px-2 py-0.5 text-[8px] font-black uppercase tracking-wider border border-amber-100/60 animate-pulse">
+                  Low ({product.stock})
                 </span>
               ) : (
-                <span className="rounded bg-green-50 px-1 py-0.5 text-[8px] font-bold uppercase text-green-700">
-                  {product.stock} in stock
+                <span className="rounded-lg bg-green-50 text-green-700 px-2 py-0.5 text-[8px] font-black uppercase tracking-wider border border-green-100">
+                  Qty: {product.stock}
                 </span>
               )}
             </div>
