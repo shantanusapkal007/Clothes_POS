@@ -516,7 +516,7 @@ export function CartPanel({
                 onCheckout({
                   paymentMethod,
                   customerPhone: customerPhone.trim(),
-                  customerName: customerName.trim() || undefined,
+                  customerName: customerName.trim() || "",
                   sendWhatsApp: sendWhatsApp && Boolean(customerPhone.trim())
                 })
               }

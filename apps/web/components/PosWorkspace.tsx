@@ -18,7 +18,10 @@ import {
   getBillLayoutConfig,
   getPrinterConfig,
   isIosBrowser,
-  printReceipt
+  printReceipt,
+  hydrateSerialPort,
+  requestSerialPrinter,
+  savePrinterConfig
 } from "../lib/printer";
 import { buildWhatsAppBillMessage, openWhatsAppShare } from "../lib/whatsapp";
 import { useStoreName } from "../lib/store-settings";
@@ -306,7 +309,7 @@ export function PosWorkspace() {
         taxPercent: item.taxPercent
       }));
 
-      const summary = calculateCheckout(checkoutItems);
+      const summary = calculateCheckout(checkoutItems, billDiscountPercent, billManualDiscountAmount);
       const billItems = summary.items.map((summaryItem) => ({
         ...summaryItem,
         productName: items.find((item) => item.productId === summaryItem.productId)?.name || "Item"
@@ -335,6 +338,37 @@ export function PosWorkspace() {
         }
       : null;
 
+    let printerConfig = getPrinterConfig();
+    if (shouldPrint && printerConfig.connectionType === "serial") {
+      try {
+        const port = await hydrateSerialPort(printerConfig);
+        if (port) {
+          if (!printerConfig.connected) {
+            printerConfig = {
+              ...printerConfig,
+              connected: true
+            };
+            savePrinterConfig(printerConfig);
+          }
+        } else {
+          const printer = await requestSerialPrinter(printerConfig.serialBaudRate ?? 9600);
+          if (printer) {
+            printerConfig = {
+              ...printerConfig,
+              ...printer,
+              connected: true
+            };
+            savePrinterConfig(printerConfig);
+          } else {
+            setError("Serial printer required but not connected.");
+            return;
+          }
+        }
+      } catch (err) {
+        console.error("Failed to connect serial printer:", err);
+      }
+    }
+
     try {
       setCheckoutPending(true);
       setError(null);
@@ -344,8 +378,8 @@ export function PosWorkspace() {
         selectedPaymentMethod,
         billDiscountPercent,
         billManualDiscountAmount,
-        pendingCustomerName || undefined,
-        pendingWhatsApp.customerPhone || undefined
+        pendingCustomerName || "",
+        pendingWhatsApp.customerPhone || ""
       );
       const savedBillNumber = result.id.slice(0, 8).toUpperCase();
       const billLayout = getBillLayoutConfig();
@@ -362,7 +396,7 @@ export function PosWorkspace() {
         const printRoute = await printReceipt(
           savedPrintableBill,
           savedBillNumber,
-          getPrinterConfig(),
+          printerConfig,
           billLayout
         );
 

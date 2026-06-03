@@ -89,8 +89,8 @@ export function checkoutBill(
       paymentMethod,
       billDiscountPercent,
       billManualDiscountAmount,
-      customerName,
-      customerPhone,
+      customerName: customerName || "",
+      customerPhone: customerPhone || "",
       items: items.map((item) => ({
         productId: item.productId,
         quantity: item.quantity,

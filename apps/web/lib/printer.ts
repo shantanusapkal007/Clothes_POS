@@ -628,7 +628,7 @@ export async function requestUsbPrinter(): Promise<PrinterConfig | null> {
   }
 }
 
-async function hydrateSerialPort(config?: PrinterConfig): Promise<any> {
+export async function hydrateSerialPort(config?: PrinterConfig): Promise<any> {
   if (serialPort) {
     return serialPort;
   }
@@ -766,12 +766,42 @@ export async function disconnectSerialPrinter(): Promise<void> {
   }
 
   try {
+    // Release any locked writer before closing
+    if (port.writable) {
+      try {
+        const writer = port.writable.getWriter();
+        writer.releaseLock();
+      } catch {
+        // Writer may already be locked or released
+      }
+    }
+    if (port.readable) {
+      try {
+        const reader = port.readable.getReader();
+        reader.releaseLock();
+      } catch {
+        // Reader may already be locked or released
+      }
+    }
     if (typeof port.close === "function") {
       await port.close();
     }
   } catch {
     // Ignore close failures.
   }
+}
+
+function withTimeout<T>(promise: Promise<T>, timeoutMs: number, errorMessage = "Timeout"): Promise<T> {
+  let timeoutId: any;
+  const timeoutPromise = new Promise<never>((_, reject) => {
+    timeoutId = setTimeout(() => {
+      reject(new Error(errorMessage));
+    }, timeoutMs);
+  });
+
+  return Promise.race([promise, timeoutPromise]).finally(() => {
+    clearTimeout(timeoutId);
+  });
 }
 
 export async function sendSerialData(
@@ -789,34 +819,61 @@ export async function sendSerialData(
   }
 
   try {
+    // Open the port if it's not already open
     if (!port.writable) {
       const baudRate = config?.serialBaudRate ?? 9600;
-      await port.open({ baudRate });
+      await withTimeout(port.open({ baudRate }), 5000, "Serial port open timeout");
+    }
+
+    if (!port.writable) {
+      console.error("Serial port opened but writable stream is null");
+      return false;
     }
 
     const writer = port.writable.getWriter();
     try {
       const chunkSize = 256;
       for (let offset = 0; offset < data.length; offset += chunkSize) {
-        await writer.write(data.slice(offset, offset + chunkSize));
-        await new Promise((resolve) => setTimeout(resolve, 10));
+        await withTimeout(
+          writer.write(data.slice(offset, offset + chunkSize)),
+          2000,
+          "Serial write chunk timeout"
+        );
+        // Small delay between chunks to let the printer process
+        await new Promise((resolve) => setTimeout(resolve, 20));
       }
     } finally {
       writer.releaseLock();
     }
     return true;
-  } catch {
+  } catch (error: any) {
+    console.error("Serial print failed:", error);
+    
+    // If the port was in a bad state (already open, locked writer, etc.), reset it
     try {
-      await disconnectSerialPrinter();
+      if (port.writable) {
+        try {
+          const w = port.writable.getWriter();
+          w.releaseLock();
+        } catch {
+          // Writer was already locked or unavailable
+        }
+      }
+      await port.close().catch(() => {});
     } catch {
-      // Ignore disconnect errors.
+      // Ignore cleanup errors
     }
+    
+    // Clear the cached port reference so hydration can find it again
+    serialPort = null;
+    
     if (retryCount === 0) {
       return sendSerialData(data, config, 1);
     }
     return false;
   }
 }
+
 export function isBluetoothAvailable(): boolean {
   return (
     typeof navigator !== "undefined" &&
@@ -1415,8 +1472,14 @@ export async function printReceipt(
     }
   }
 
-  // On iOS, try browser print (iframe-based AirPrint trigger).
-  // This is the most reliable path for iOS Safari.
+  // If a device printer was explicitly configured (serial/usb/bluetooth),
+  // do NOT fall back to the browser print dialog — it shows "Save as PDF" which confuses users.
+  // Return "failed" so the caller can show an actionable error message.
+  if (printerConfig.connectionType !== "none") {
+    return "failed";
+  }
+
+  // Only use browser print as fallback when no specific printer is configured.
   return openBrowserPrintWindow(content, layout) ? "browser" : "failed";
 }
 

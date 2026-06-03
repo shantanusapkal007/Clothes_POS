@@ -144,8 +144,8 @@ export async function POST(request: NextRequest) {
         billDiscountPercent: body.billDiscountPercent,
         billManualDiscountAmount: body.billManualDiscountAmount,
         paymentMethod: body.paymentMethod,
-        customerName: body.customerName,
-        customerPhone: body.customerPhone,
+        customerName: body.customerName || null,
+        customerPhone: body.customerPhone || null,
         status: "completed",
         items: summary.items.map(item => {
           const p = productMap.get(item.productId);

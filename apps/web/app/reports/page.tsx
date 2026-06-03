@@ -8,6 +8,9 @@ import {
   getPrinterConfig,
   printReceipt,
   type PrintableBillData,
+  hydrateSerialPort,
+  requestSerialPrinter,
+  savePrinterConfig
 } from "../../lib/printer";
 import type { BillResponse } from "../../types";
 
@@ -156,7 +159,39 @@ export default function ReportsPage() {
     try {
       setReprinting(true);
       const layout = getBillLayoutConfig();
-      const config = getPrinterConfig();
+      let config = getPrinterConfig();
+
+      if (config.connectionType === "serial") {
+        try {
+          const port = await hydrateSerialPort(config);
+          if (port) {
+            if (!config.connected) {
+              config = {
+                ...config,
+                connected: true
+              };
+              savePrinterConfig(config);
+            }
+          } else {
+            const printer = await requestSerialPrinter(config.serialBaudRate ?? 9600);
+            if (printer) {
+              config = {
+                ...config,
+                ...printer,
+                connected: true
+              };
+              savePrinterConfig(config);
+            } else {
+              setMessage("Serial printer not connected.");
+              setReprinting(false);
+              return;
+            }
+          }
+        } catch (err) {
+          console.error("Failed to connect serial printer:", err);
+        }
+      }
+
       const printData: PrintableBillData = {
         items: bill.items.map((i) => ({
           productName: i.productName,

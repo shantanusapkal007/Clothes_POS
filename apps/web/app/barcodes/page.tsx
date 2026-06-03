@@ -3,9 +3,11 @@
 import { useEffect, useState, useMemo, useRef } from "react";
 import useSWR from "swr";
 import Barcode from "react-barcode";
+import { AnimatePresence } from "framer-motion";
 import { getProducts } from "../../lib/api";
 import { type Product } from "../../types";
-import { getBillLayoutConfig, getPrinterConfig, printBarcodeLabel } from "../../lib/printer";
+import { getBillLayoutConfig, getPrinterConfig, printBarcodeLabel, hydrateSerialPort, requestSerialPrinter, savePrinterConfig } from "../../lib/printer";
+import { PrinterSettings } from "../../components/PrinterSettings";
 
 export default function BarcodeGeneratorPage() {
   const [storeName, setStoreName] = useState("Clothing Store");
@@ -20,12 +22,13 @@ export default function BarcodeGeneratorPage() {
 
   const printRef = useRef<HTMLDivElement>(null);
 
+  const [printerSettingsOpen, setPrinterSettingsOpen] = useState(false);
+
   // Fetch products for dropdown auto-select
   const { data } = useSWR("/api/products", () => getProducts());
   const products = data?.items || [];
 
-  // Load layout store name as initial default
-  useEffect(() => {
+  const loadLayoutConfig = () => {
     try {
       const layout = getBillLayoutConfig();
       if (layout.companyName) {
@@ -34,7 +37,19 @@ export default function BarcodeGeneratorPage() {
     } catch {
       // ignore
     }
+  };
+
+  // Load layout store name as initial default
+  useEffect(() => {
+    loadLayoutConfig();
   }, []);
+
+  // Reload store settings when settings modal is closed
+  useEffect(() => {
+    if (!printerSettingsOpen) {
+      loadLayoutConfig();
+    }
+  }, [printerSettingsOpen]);
 
   const showMsg = (text: string, type: "success" | "error" = "success") => {
     setMessage({ text, type });
@@ -82,7 +97,34 @@ export default function BarcodeGeneratorPage() {
       return;
     }
 
-    const config = getPrinterConfig();
+    let config = getPrinterConfig();
+    if (config.connectionType === "serial") {
+      try {
+        let port = await hydrateSerialPort(config);
+        if (port) {
+          if (!config.connected) {
+            config = {
+              ...config,
+              connected: true
+            };
+            savePrinterConfig(config);
+          }
+        } else {
+          const printer = await requestSerialPrinter(config.serialBaudRate ?? 9600);
+          if (printer) {
+            config = {
+              ...config,
+              ...printer,
+              connected: true
+            };
+            savePrinterConfig(config);
+          }
+        }
+      } catch (err) {
+        console.error("Failed to connect serial printer:", err);
+      }
+    }
+
     if (config.connected && config.connectionType !== "none") {
       try {
         const layout = getBillLayoutConfig();
@@ -313,12 +355,22 @@ export default function BarcodeGeneratorPage() {
         )}
 
         {/* Page Header */}
-        <div className="mb-8">
-          <span className="text-[10px] font-bold uppercase tracking-[0.22em] text-on-secondary-container">Label Printing</span>
-          <h1 className="mt-1 text-2xl font-bold text-on-background md:text-3xl">Barcode Generator</h1>
-          <p className="mt-1 text-xs text-on-secondary-container">
-            Generate and print bulk thermal labels for clothing items
-          </p>
+        <div className="mb-8 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+          <div>
+            <span className="text-[10px] font-bold uppercase tracking-[0.22em] text-on-secondary-container">Label Printing</span>
+            <h1 className="mt-1 text-2xl font-bold text-on-background md:text-3xl">Barcode Generator</h1>
+            <p className="mt-1 text-xs text-on-secondary-container">
+              Generate and print bulk thermal labels for clothing items
+            </p>
+          </div>
+          <button
+            onClick={() => setPrinterSettingsOpen(true)}
+            type="button"
+            className="flex items-center gap-2 self-start rounded-xl border border-outline-variant/60 bg-white px-4 py-2.5 text-xs font-bold text-slate-700 shadow-sm transition hover:bg-slate-50 active:scale-95 sm:self-auto"
+          >
+            <span className="material-symbols-outlined text-[16px]">settings</span>
+            Printer & Layout Settings
+          </button>
         </div>
 
         <div className="grid grid-cols-1 gap-8 lg:grid-cols-12 items-start">
@@ -529,6 +581,12 @@ export default function BarcodeGeneratorPage() {
           </section>
         </div>
       </div>
+
+      <AnimatePresence>
+        {printerSettingsOpen ? (
+          <PrinterSettings onClose={() => setPrinterSettingsOpen(false)} />
+        ) : null}
+      </AnimatePresence>
     </div>
   );
 }
