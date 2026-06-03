@@ -83,9 +83,9 @@ export async function generatePDFBill(
   let finalY = (doc as any).lastAutoTable.finalY + 10;
 
   // Calculate dynamic height needed for the summary block
-  let summaryHeightNeeded = 25; // Base height for subtotal, total amount, and some margins
-  if (layout.showDiscountBreakdown && bill.discountAmount > 0) summaryHeightNeeded += 6;
-  if (layout.showTaxBreakdown && bill.taxAmount > 0) summaryHeightNeeded += 6;
+  let summaryHeightNeeded = 28; // Base height for subtotal, total amount, and some margins
+  if (layout.showDiscountBreakdown && bill.discountAmount > 0) summaryHeightNeeded += 7;
+  if (layout.showTaxBreakdown && bill.taxAmount > 0) summaryHeightNeeded += 7;
   if (layout.footerText) summaryHeightNeeded += 20;
 
   // If summary + footer overflows the page, add a clean page break
@@ -96,32 +96,36 @@ export async function generatePDFBill(
   
   doc.setFontSize(10);
   doc.setFont("helvetica", "normal");
-  doc.text(`Subtotal:`, pageWidth - 54, finalY);
+  doc.text(`Subtotal:`, pageWidth - 75, finalY);
   doc.text(`₹${bill.totalAmount.toFixed(2)}`, pageWidth - 14, finalY, { align: "right" });
   
-  let summaryY = finalY + 6;
+  let summaryY = finalY + 7;
 
   if (layout.showDiscountBreakdown && bill.discountAmount > 0) {
-    doc.text(`Discount:`, pageWidth - 54, summaryY);
+    doc.text(`Discount:`, pageWidth - 75, summaryY);
     doc.setTextColor(22, 163, 74); // green
     doc.text(`-₹${bill.discountAmount.toFixed(2)}`, pageWidth - 14, summaryY, { align: "right" });
     doc.setTextColor(0, 0, 0);
-    summaryY += 6;
+    summaryY += 7;
   }
 
   if (layout.showTaxBreakdown && bill.taxAmount > 0) {
-    doc.text(`Tax:`, pageWidth - 54, summaryY);
+    doc.text(`Tax:`, pageWidth - 75, summaryY);
     doc.text(`₹${bill.taxAmount.toFixed(2)}`, pageWidth - 14, summaryY, { align: "right" });
-    summaryY += 6;
+    summaryY += 7;
   }
 
-  doc.setFont("helvetica", "bold");
-  doc.setFontSize(14);
-  summaryY += 2;
-  doc.text(`Total Amount:`, pageWidth - 54, summaryY);
-  doc.text(`₹${bill.finalAmount.toFixed(2)}`, pageWidth - 14, summaryY, { align: "right" });
+  // Draw thin divider line before Total
+  doc.setLineWidth(0.2);
+  doc.setDrawColor(200, 200, 200);
+  doc.line(pageWidth - 75, summaryY - 2, pageWidth - 14, summaryY - 2);
 
-  summaryY += 15;
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(12);
+  doc.text(`Total Amount:`, pageWidth - 75, summaryY + 3);
+  doc.text(`₹${bill.finalAmount.toFixed(2)}`, pageWidth - 14, summaryY + 3, { align: "right" });
+
+  summaryY += 18;
   if (layout.footerText) {
     // If the footer overflows even after summary placement, add a new page specifically for it
     if (summaryY > pageHeight - 10) {

@@ -15,7 +15,11 @@ type ShareableBill = {
 };
 
 function normalizePhone(phone: string) {
-  return phone.replace(/[^\d]/g, "");
+  const cleaned = phone.replace(/[^\d]/g, "");
+  if (cleaned.length >= 10) {
+    return `91${cleaned.slice(-10)}`;
+  }
+  return cleaned;
 }
 
 function formatMessageDate(createdAt?: string) {
